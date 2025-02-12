@@ -71,7 +71,6 @@ const columns: ColumnDef<Game>[] = [
     accessorKey: "fen",
     header: "Moves",
     cell: ({ row }) => {
-      console.log(row.original)
       return <div>{row.original.fen.split(" ").pop()}</div>
     },
   },
@@ -85,6 +84,17 @@ const columns: ColumnDef<Game>[] = [
       )
 
       return <div className="font-medium">{end_time}</div>
+    },
+  },
+  {
+    accessorKey: "eco",
+    header: "Opening",
+    cell: ({ row }) => {
+      return (
+        <div>
+          {row.original.eco.split("https://www.chess.com/openings/")[1]}
+        </div>
+      )
     },
   },
   {
