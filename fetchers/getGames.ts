@@ -6,10 +6,7 @@ export const getGames = async (username = "sleeprerun") => {
   try {
     // Fetch the archives (all available months with games)
     const archiveResponse = await fetch(
-      `https://api.chess.com/pub/player/${username}/games/archives`,
-      {
-        cache: "force-cache",
-      }
+      `https://api.chess.com/pub/player/${username}/games/archives`
     )
     if (!archiveResponse.ok) {
       throw new Error(
@@ -23,7 +20,7 @@ export const getGames = async (username = "sleeprerun") => {
 
     // Fetch games from each archive (each URL corresponds to a month's games)
     const gameFetches = archives.map((url) =>
-      fetch(url, { cache: "force-cache" }).then((res) => res.json())
+      fetch(url).then((res) => res.json())
     )
 
     // Wait for all game fetches to complete
