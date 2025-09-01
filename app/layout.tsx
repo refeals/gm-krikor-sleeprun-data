@@ -17,8 +17,6 @@ export const metadata: Metadata = {
   description: "Jogos SleepRun - Criado por Rafael Siqueira",
 }
 
-export const revalidate = 3600 * 20 // revalidate at most every 20 hours
-
 export default function RootLayout({
   children,
 }: Readonly<{
