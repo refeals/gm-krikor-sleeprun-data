@@ -1,12 +1,6 @@
 "use client"
 
-import {
-  ColumnDef,
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-} from "@tanstack/react-table"
-
+import { useFilteredGames } from "@/app/hooks/useGames"
 import {
   Table,
   TableBody,
@@ -16,12 +10,14 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Game } from "@/types/Game"
+import {
+  ColumnDef,
+  flexRender,
+  getCoreRowModel,
+  useReactTable,
+} from "@tanstack/react-table"
 import { format } from "date-fns"
 import { SquareArrowOutUpRight } from "lucide-react"
-
-type Props = {
-  gamesData: Game[]
-}
 
 const columns: ColumnDef<Game>[] = [
   {
@@ -30,12 +26,14 @@ const columns: ColumnDef<Game>[] = [
     cell: ({ row }) => {
       return (
         <div className="flex flex-col">
-          <span>
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 bg-white" />
             {row.original.black.username} ({row.original.black.rating})
-          </span>
-          <span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 bg-black" />
             {row.original.white.username} ({row.original.white.rating})
-          </span>
+          </div>
         </div>
       )
     },
@@ -101,14 +99,14 @@ const columns: ColumnDef<Game>[] = [
     header: "Actions",
     cell: ({ row }) => {
       return (
-        <div className="flex flex-col">
+        <div className="flex justify-end">
           <a
             href={row.original.url}
             target="_blank"
             rel="noopener noreferrer"
             className="underline"
           >
-            <SquareArrowOutUpRight />
+            <SquareArrowOutUpRight className="size-5" />
           </a>
         </div>
       )
@@ -116,15 +114,17 @@ const columns: ColumnDef<Game>[] = [
   },
 ]
 
-export function Main({ gamesData }: Props) {
+export function Main() {
+  const { data } = useFilteredGames()
+
   const table = useReactTable({
-    data: gamesData,
+    data: data ?? [],
     columns,
     getCoreRowModel: getCoreRowModel(),
   })
 
   return (
-    <div className="rounded-md border w-full overflow-y-auto">
+    <div className="rounded-md border w-full flex-1">
       <Table>
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
@@ -164,12 +164,13 @@ export function Main({ gamesData }: Props) {
           ) : (
             <TableRow>
               <TableCell colSpan={columns.length} className="h-24 text-center">
-                No results.
+                Nenhum resultado encontrado
               </TableCell>
             </TableRow>
           )}
         </TableBody>
       </Table>
+      <div className="p-4 text-center border-t">{data?.length} jogos</div>
     </div>
   )
 }
