@@ -36,7 +36,7 @@ export default function Home() {
 
         <div className="flex flex-col gap-3 md:flex-row md:gap-6">
           <a
-            href="https://gmkrikor.com/"
+            href="https://gmkrikor.com.br/"
             target="_blank"
             rel="noopener noreferrer"
             className="underline flex items-center gap-1.5 justify-center"
