@@ -9,15 +9,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Github, Youtube } from "lucide-react"
+import { Github, Youtube, Globe } from "lucide-react"
 
 export default function Home() {
   const { filter, setFilter } = useFilteredGames()
 
   return (
     <main className="flex h-screen flex-col items-center justify-between px-4 md:px-24 pt-4 md:pt-12 gap-6">
-      <nav className="flex flex-col gap-4 justify-center items-center">
-        <h1 className="text-3xl">Jogos SleepRun</h1>
+      <nav className="flex flex-col gap-6 justify-center items-center">
+        <h1 className="text-3xl font-bold tracking-wide">Jogos SleepRun</h1>
 
         <div>
           <Select onValueChange={setFilter} value={filter}>
@@ -34,12 +34,20 @@ export default function Home() {
           </Select>
         </div>
 
-        <div className="flex gap-6">
+        <div className="flex flex-col gap-3 md:flex-row md:gap-6">
+          <a
+            href="https://gmkrikor.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline flex items-center gap-1.5 justify-center"
+          >
+            <Globe className="size-6" /> Site oficial do GM Krikor
+          </a>
           <a
             href="https://www.youtube.com/@GMKrikor"
             target="_blank"
             rel="noopener noreferrer"
-            className="underline flex items-center gap-1.5"
+            className="underline flex items-center gap-1.5 justify-center"
           >
             <Youtube className="size-6" /> Youtube
           </a>
@@ -47,7 +55,7 @@ export default function Home() {
             href="https://github.com/refeals/gm-krikor-sleeprun-data"
             target="_blank"
             rel="noopener noreferrer"
-            className="underline flex items-center gap-1.5"
+            className="underline flex items-center gap-1.5 justify-center"
           >
             <Github className="size-6" /> Github
           </a>
