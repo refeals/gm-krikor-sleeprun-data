@@ -28,11 +28,11 @@ const columns: ColumnDef<Game>[] = [
         <div className="flex flex-col">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 bg-white" />
-            {row.original.black.username} ({row.original.black.rating})
+            {row.original.white.username} ({row.original.white.rating})
           </div>
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 bg-black" />
-            {row.original.white.username} ({row.original.white.rating})
+            {row.original.black.username} ({row.original.black.rating})
           </div>
         </div>
       )
