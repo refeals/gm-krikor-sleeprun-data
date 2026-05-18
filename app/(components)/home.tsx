@@ -36,7 +36,7 @@ export default function Home() {
     <main className="flex h-screen flex-col items-center justify-between px-4 md:px-24 pt-4 md:pt-12 gap-6">
       <h1 className="text-3xl font-bold tracking-wide">Jogos GM Krikor</h1>
 
-      <nav className="flex flex-1 gap-6 justify-center items-center w-full">
+      <nav className="flex gap-6 justify-center items-center w-full">
         <div className="flex flex-1 flex-col md:flex-row justify-between gap-3">
           <div className="flex flex-col md:flex-row items-center gap-4 w-full">
             <Select
