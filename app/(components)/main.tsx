@@ -230,7 +230,7 @@ export function Main() {
           )}
         </TableBody>
       </Table>
-      <div className="p-4 border-t flex items-center justify-between gap-4 flex-wrap mt-auto">
+      <div className="p-4 border-t flex items-center justify-center md:justify-between gap-4 flex-wrap mt-auto">
         <div className="text-sm">
           {totalRows === 0
             ? "0 de 0"

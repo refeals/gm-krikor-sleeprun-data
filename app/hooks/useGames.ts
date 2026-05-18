@@ -4,22 +4,34 @@ import { format } from "date-fns";
 import { useMemo } from "react";
 import { create } from "zustand";
 
+export type Account = "sleeprerun" | "speedbemruim";
+
+export const ACCOUNTS: { value: Account; label: string }[] = [
+  { value: "sleeprerun", label: "SleepRun" },
+  { value: "speedbemruim", label: "SpeedBemRuim" },
+];
+
 export type Store = {
+  account: Account;
   filter: {
     year: string | "all";
     opening: string;
   };
   page: number;
   pageSize: number;
+  setAccount: (account: Account) => void;
   setFilter: (filter: Partial<Store["filter"]>) => void;
   setPage: (page: number) => void;
   setPageSize: (pageSize: number) => void;
 };
 
 const filterStore = create<Store>((set) => ({
+  account: "sleeprerun",
   filter: { year: "all", opening: "" },
   page: 1,
   pageSize: 25,
+  setAccount: (account) =>
+    set({ account, filter: { year: "all", opening: "" }, page: 1 }),
   setFilter: (partial) =>
     set((state) => ({
       filter: { ...state.filter, ...partial },
@@ -29,10 +41,10 @@ const filterStore = create<Store>((set) => ({
   setPageSize: (pageSize: number) => set({ pageSize, page: 1 }),
 }));
 
-const useGetGames = () => {
+const useGetGames = (account: Account) => {
   return useQuery({
-    queryKey: ["games"],
-    queryFn: async () => await getGames(),
+    queryKey: ["games", account],
+    queryFn: async () => await getGames(account),
     refetchOnMount: false,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
@@ -42,9 +54,26 @@ const useGetGames = () => {
 };
 
 export const useFilteredGames = () => {
-  const { filter, setFilter, page, setPage, pageSize, setPageSize } =
-    filterStore();
-  const { data: games } = useGetGames();
+  const {
+    account,
+    filter,
+    setAccount,
+    setFilter,
+    page,
+    setPage,
+    pageSize,
+    setPageSize,
+  } = filterStore();
+  const { data: games } = useGetGames(account);
+
+  const availableYears = useMemo(() => {
+    if (!games || games.length === 0) return [];
+    const years = new Set<number>();
+    for (const game of games) {
+      years.add(new Date(game.end_time * 1000).getFullYear());
+    }
+    return Array.from(years).sort((a, b) => b - a);
+  }, [games]);
 
   const filteredGames = useMemo(() => {
     if (!games) return [];
@@ -64,6 +93,9 @@ export const useFilteredGames = () => {
 
   return {
     data: filteredGames,
+    account,
+    setAccount,
+    availableYears,
     filter,
     setFilter,
     page,
