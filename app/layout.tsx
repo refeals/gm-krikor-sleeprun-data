@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next"
+import Script from "next/script"
 
 import { fontVariables } from "@/app/fonts"
 import { SiteFooter } from "@/components/site-footer"
@@ -17,6 +18,8 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 }
 
+const umamiWebsiteId = process.env.UMAMI_WEBSITE_ID
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="pt-BR" className={fontVariables}>
@@ -29,6 +32,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         </a>
         {children}
         <SiteFooter />
+        {umamiWebsiteId ? (
+          <Script
+            src="https://umami.rafaelsiqueira.dev/script.js"
+            data-website-id={umamiWebsiteId}
+            strategy="afterInteractive"
+          />
+        ) : null}
       </body>
     </html>
   )
