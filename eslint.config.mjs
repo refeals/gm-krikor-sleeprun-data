@@ -10,7 +10,6 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
-    ".next-docs/**",
     "sleeprun-redesign/**",
   ]),
 ]);

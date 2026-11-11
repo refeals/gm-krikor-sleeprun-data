@@ -4,6 +4,8 @@ Revisão feita em 11 nov 2026, antes da implementação, sobre o `HANDOFF.md`, a
 
 **Este arquivo complementa o `HANDOFF.md`. Onde os dois discordam, vale este.**
 
+As seções 3 e 8 foram revistas depois da atualização para o Next 16.4.6, com base na documentação que vem no pacote (`node_modules/next/dist/docs/`).
+
 ## 1. Decisões
 
 1. O seletor de conta (SleepRun / SpeedBemRuim) vai para o header, no lugar do eyebrow "SLEEPRUN" e do botão de menu. O menu sai.
@@ -34,10 +36,10 @@ Calcular uma vez por conta (memo), a partir de `Game`, e filtrar sobre ele:
 type GameResult = "win" | "draw" | "loss"
 type PieceColor = "white" | "black"
 
+// Sem PGN: ele é 70% do volume e só o detalhe precisa dele (seção 8).
 type GameView = {
   uuid: string
   url: string
-  pgn: string
   endedAt: Date
   result: GameResult
   termination: string          // código do Chess.com: checkmated, resigned, timeout, agreed…
@@ -60,7 +62,7 @@ Regras:
 - **`ratingDelta`:** rating deste jogo menos o rating do jogo anterior da mesma conta, em ordem cronológica. Se o sinal contradiz o resultado (vitória com delta negativo, derrota com delta positivo) ou se o valor absoluto passa de 300, o jogo é `isRunStart` e `ratingDelta` fica `null`.
 - **`openingName`:** tirar o prefixo `https://www.chess.com/openings/`, cortar no primeiro trecho que começa com número de lance (`6.Be3`, `1...d5`) e trocar `-` por espaço. Sem `eco`, `null`.
 - **`moveCount`:** maior número de lance no movetext do PGN.
-- **Formato da conta:** do jogo mais recente. `time_control` `"600"` vira `10+0`, `"180+2"` vira `3+2`. `time_class` `rapid` vira "Rápida", `blitz` fica "Blitz", `bullet` fica "Bullet".
+- **Formato da conta:** constante na configuração de contas (`ACCOUNTS`), já que cada conta tem um formato só: SleepReRun "Rápida 10+0", SpeedBemRuim "Blitz 3+0". Assim o header não depende dos dados e continua de pé nas telas de carregamento e erro.
 
 ### Formatação
 
@@ -73,8 +75,10 @@ Regras:
 ## 3. Rotas e estado
 
 - `/` redireciona para `/sleeprerun`.
-- `/[account]` é a lista. `account` aceita `sleeprerun` e `speedbemruim`. Outro valor dá `notFound()`.
-- `/[account]/jogo/[uuid]` é o detalhe. Acesso direto busca os jogos da conta no servidor e procura o `uuid`. Se não achar, `notFound()`. Navegação no cliente lê do cache do React Query.
+- `/[account]` é a lista. `account` aceita `sleeprerun` e `speedbemruim`. Outro valor dá 404 (`dynamicParams = false`, seção 8).
+- `/[account]/jogo/[uuid]` é o detalhe, renderizado no servidor (seção 8, item 6). Se o `uuid` não existir na conta, `notFound()`.
+- `app/[account]/layout.tsx` tem o header (seletor de conta, h1, linha de formato). Assim `loading.tsx` e `error.tsx`, que ficam dentro do layout, mantêm o header de pé.
+- No Next 16, `params` é uma Promise: `const { account } = await params`.
 - Filtros na query string, com as mesmas chaves do código: `q`, `result` (`win|draw|loss`), `color` (`white|black`), `year`, `sort` (`newest|oldest|accuracy`), `page`, `size`. Valor padrão não aparece na URL.
 - A URL é a fonte da verdade. O store de filtros do zustand sai. A busca atualiza a URL com `router.replace` depois de 300 ms sem digitar.
 - `page` serve aos dois layouts. No mobile, "Carregar mais" incrementa `page` e a lista mostra os itens de `0` até `page × 25`. No desktop, `page` e `size` fatiam a tabela.
@@ -235,8 +239,9 @@ Mostrando 1–25 de 1.234          Linhas por página [25]       ‹ 1 2 3 … 5
 
 ### Erro
 
-- **Quando aparece:** `isError` da query. "Tentar de novo" chama `refetch()` e fica "Tentando…" (desabilitado) enquanto roda.
-- **Header completo**, com o seletor, para dar para tentar a outra conta.
+- **Quando aparece:** a camada de dados lança erro e ele cai em `app/[account]/error.tsx` (Client Component).
+- **"Tentar de novo"** chama `retry()`, que no Next 16 busca de novo e re-renderiza o segmento. `reset()` só re-renderiza sem buscar, então não serve aqui. `retry()` não devolve Promise, então não existe estado "Tentando…" confiável: o botão só chama `retry()`.
+- **Header completo**, vindo do layout, com o seletor, para dar para tentar a outra conta.
 - **Bloco `role="alert"`:**
   - ícone
   - h2 "O Chess.com não respondeu"
@@ -353,14 +358,48 @@ Vocabulário único: a ação que se chama "Copiar PGN" confirma com "PGN copiad
 
 Os pontos médios desta tabela só separam itens da tabela. Na interface, cada texto é um elemento separado.
 
-## 8. Mudanças fora da interface
+## 8. Camada de dados (Next 16)
 
-O `HANDOFF.md` diz que só a interface muda. Sem os itens abaixo, as telas de erro, de carregamento e de detalhe não funcionam:
+O `HANDOFF.md` diz que só a interface muda. Sem os itens abaixo, as telas de erro, de carregamento e de detalhe não funcionam.
 
-1. **`getGames` tem que lançar erro.** Hoje ele captura e devolve `[]`, e a tela de erro nunca aparece. Checar `res.ok` na lista de arquivos e em cada mês.
-2. **Chave da query igual nos dois lados.** `page.tsx` faz prefetch em `["games"]` e o hook lê `["games", account]`. O prefetch do servidor é descartado e o cliente sempre busca de novo. Usar `["games", account]` nos dois lados.
-3. **Cache dos meses.** Cada carregamento busca todos os meses (67 na SleepReRun). Meses passados não mudam e podem usar `cache: "force-cache"`. O mês corrente e a lista de arquivos usam `next: { revalidate: 300 }`. `fetch` dentro de Server Action não entra no Data Cache (conferir na doc do Next 15). Por isso a busca sai do arquivo `"use server"` e vai para um módulo só de servidor, usado pela página. Para o `refetch` do cliente, um Route Handler `GET /api/games/[account]`.
-4. **Número de lances pelo PGN**, porque o FEN costuma vir sem contador (seção 2).
+Medido com os dados reais em nov/2026: cada conta tem entre 1,5 mil e 1,8 mil jogos e cerca de 5 MB de JSON, dos quais 70% são PGN. Hoje o cliente recebe tudo pela Server Action, cerca de 1,1 MB com gzip. A lista no formato `GameView`, sem PGN, fica entre 650 e 700 KB, ou cerca de 105 KB com gzip.
+
+### Estado atual
+
+- `/` sai como estática (○) no build. Os jogos que vão no HTML são os do momento do build. A página só parece atualizada porque o cliente busca tudo de novo pela Server Action.
+- O prefetch do servidor usa a chave `["games"]` e o hook lê `["games", account]`, então o prefetch é descartado.
+- `getGames` captura qualquer erro e devolve `[]`. A tela de erro nunca apareceria.
+- Cada carregamento busca todos os meses de novo (67 na SleepReRun), sem cache.
+
+### Arquitetura nova
+
+1. **A busca sai da Server Action.** Pela doc do 16, Server Functions servem para mutação e o cliente despacha uma de cada vez; busca de dados fica em Server Component. `fetchers/getGames.ts` vira um módulo só de servidor (`import "server-only"`), chamado pelas páginas.
+2. **Erros sobem.** Checar `res.ok` na lista de arquivos e em cada mês e lançar erro no lugar do `return []`. Quem mostra a tela de erro é o `error.tsx`.
+3. **Cache por mês no `fetch`:**
+   - lista de arquivos: `next: { revalidate: 3600 }`
+   - meses passados: `cache: "force-cache"`, porque não mudam mais
+   - mês corrente: `next: { revalidate: 300 }`
+
+   A escolha pelo cache do `fetch` vem da doc de `use cache` ("Runtime caching considerations"). Em serverless, o handler padrão do `use cache` fica em memória e normalmente não guarda entradas entre requests. O cache do `fetch` persiste entre requests e entre deploys.
+4. **Lista estática com ISR**, em `app/[account]/page.tsx`:
+   - `generateStaticParams` devolve as duas contas, e `dynamicParams = false` faz qualquer outra dar 404. Essa config fica no `page.tsx` da lista. Num layout ela valeria para os filhos e derrubaria as páginas de detalhe.
+   - `export const revalidate = 300`.
+   - A página monta o `GameView[]` no servidor e passa para o componente cliente da lista como prop.
+   - Os filtros são lidos no cliente com `useSearchParams`, dentro de um `<Suspense>`, para a página continuar estática. Ler `searchParams` na página tornaria a rota dinâmica.
+5. **React Query, zustand e react-table saem.** Os dados chegam como prop do Server Component e os filtros vivem na URL, então nenhum dos três tem mais função. O problema da chave de query divergente some junto. A tabela desktop é simples e a paginação já é própria.
+6. **Detalhe** em `app/[account]/jogo/[uuid]/page.tsx`:
+   - acha o jogo na lista (em cache)
+   - usa o `endedAt` para saber o mês
+   - busca o mês (também em cache) para ter o PGN
+
+   Jogo terminado não muda: `generateStaticParams` devolve `[]` e `revalidate = false`, então cada página é gerada na primeira visita e guardada.
+7. **PGN sob demanda para a tabela desktop.**
+   - **Route Handler:** `GET /api/games/[account]/[uuid]/pgn`, respondendo `text/plain`.
+   - **Cópia:** o botão "PGN" chama `navigator.clipboard.write([new ClipboardItem({ "text/plain": fetchPromise })])`. Passar a Promise para o `ClipboardItem` mantém o gesto do usuário válido no Safari durante o fetch.
+   - **Fallback:** sem `ClipboardItem`, busca primeiro e depois usa `writeText`.
+   - **No detalhe:** o PGN já está na página, então a cópia usa `writeText` direto.
+8. **Cache Components fica desligado.** O checklist de upgrade do 16 pede para não ligar só por causa do upgrade. Aqui a página é estática com filtro no cliente, e o ganho dele (shell estático com partes por request em streaming) não aparece. Vale reavaliar se surgir conteúdo por request.
+9. **Número de lances pelo PGN**, porque o FEN costuma vir sem contador (seção 2).
 
 ## 9. Ordem sugerida
 
