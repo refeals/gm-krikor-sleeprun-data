@@ -2,7 +2,7 @@
 
 import { ExternalLink } from "lucide-react"
 
-import { useTransientFlag } from "@/hooks/use-transient-flag"
+import { useTransientValue } from "@/hooks/use-transient-flag"
 import { copyText } from "@/lib/clipboard"
 
 const FEEDBACK_MS = 2000
@@ -12,16 +12,22 @@ type GameActionsProps = {
   pgn: string
 }
 
+const COPY_LABEL = { idle: "Copiar PGN", copied: "PGN copiado", failed: "Erro ao copiar" }
+const COPY_STATUS = {
+  copied: "PGN copiado",
+  failed: "Não foi possível copiar o PGN",
+}
+
 /**
  * Sticks to the bottom of the screen on mobile while the game is in view, then
  * settles at the end of <main> so the site footer below stays reachable.
  * Inline from 768px.
  */
 export function GameActions({ url, pgn }: GameActionsProps) {
-  const [isCopied, showCopied] = useTransientFlag(FEEDBACK_MS)
+  const [copyResult, setCopyResult] = useTransientValue<"copied" | "failed">(FEEDBACK_MS)
 
   async function handleCopy() {
-    if (await copyText(pgn)) showCopied()
+    setCopyResult((await copyText(pgn)) ? "copied" : "failed")
   }
 
   return (
@@ -44,10 +50,10 @@ export function GameActions({ url, pgn }: GameActionsProps) {
           onClick={handleCopy}
           className="min-h-12 rounded-card border border-border bg-surface px-6 text-base font-semibold transition-colors duration-150 hover:border-border-strong active:bg-surface-pressed"
         >
-          {isCopied ? "PGN copiado" : "Copiar PGN"}
+          {COPY_LABEL[copyResult ?? "idle"]}
         </button>
         <span role="status" className="sr-only">
-          {isCopied ? "PGN copiado" : ""}
+          {copyResult ? COPY_STATUS[copyResult] : ""}
         </span>
       </div>
     </div>

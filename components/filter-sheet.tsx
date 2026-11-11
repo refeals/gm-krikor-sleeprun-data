@@ -76,9 +76,14 @@ export function FilterSheet({ id, games, query, years, onApply, onClosed }: Filt
     setIsClosing(true)
   }
 
+  // A click whose press started inside the sheet and ended over the backdrop
+  // (selecting text, say) also targets the dialog. Only a press that began
+  // on the backdrop closes it.
+  const pressStartedOnBackdropRef = useRef(false)
+
   function handleBackdropClick(event: MouseEvent<HTMLDialogElement>) {
     // Clicks on ::backdrop land on the dialog itself; content clicks land on children.
-    if (event.target === event.currentTarget) requestClose()
+    if (event.target === event.currentTarget && pressStartedOnBackdropRef.current) requestClose()
   }
 
   function handleApply() {
@@ -115,6 +120,9 @@ export function FilterSheet({ id, games, query, years, onApply, onClosed }: Filt
       onCancel={(event) => {
         event.preventDefault()
         requestClose()
+      }}
+      onPointerDown={(event) => {
+        pressStartedOnBackdropRef.current = event.target === event.currentTarget
       }}
       onClick={handleBackdropClick}
       onAnimationEnd={() => {

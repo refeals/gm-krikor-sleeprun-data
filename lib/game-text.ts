@@ -38,6 +38,12 @@ export const RESULT_LETTER: Record<GameResult, string> = {
   loss: "D",
 }
 
+/** Lowercase, for use inside a sentence: "Krikor de brancas". */
+export const COLOR_NAME: Record<PieceColor, string> = {
+  white: "brancas",
+  black: "pretas",
+}
+
 export const COLOR_LABEL: Record<PieceColor, string> = {
   white: "Brancas",
   black: "Pretas",

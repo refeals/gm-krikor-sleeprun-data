@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import type { MouseEvent } from "react"
 
 import { cameFromList } from "@/lib/list-return"
+import { isModifiedClick } from "@/lib/events"
 
 type BackToListLinkProps = {
   accountId: string
@@ -20,9 +21,7 @@ export function BackToListLink({ accountId, uuid }: BackToListLinkProps) {
   const router = useRouter()
 
   function handleClick(event: MouseEvent<HTMLAnchorElement>) {
-    const opensElsewhere =
-      event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey
-    if (opensElsewhere) return
+    if (isModifiedClick(event)) return
     if (cameFromList(uuid) && window.history.length > 1) {
       event.preventDefault()
       router.back()

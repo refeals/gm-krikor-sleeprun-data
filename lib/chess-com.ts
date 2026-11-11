@@ -44,30 +44,28 @@ function wait(milliseconds: number) {
 async function fetchJson<T>(url: string, revalidateSeconds: number): Promise<T> {
   for (let attempt = 1; ; attempt++) {
     const isLastAttempt = attempt >= MAX_ATTEMPTS
-    let response: Response
+    let failure: string
     try {
-      response = await fetch(url, {
+      const response = await fetch(url, {
         headers: REQUEST_HEADERS,
         next: { revalidate: revalidateSeconds },
         // A signal per attempt also opts out of Next's per-render fetch
         // dedupe, which would otherwise replay the first failed response.
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       })
+      // Reading the body is inside the try: a timeout while streaming it, or
+      // an HTML maintenance page served with 200, is retried too.
+      if (response.ok) return (await response.json()) as T
+
+      const isRetryable = response.status === 429 || response.status >= 500
+      if (!isRetryable) throw new ChessComError(`Chess.com returned ${response.status} for ${url}`)
+      failure = `status ${response.status}`
     } catch (error) {
-      // Network failure or timeout.
-      if (isLastAttempt) {
-        throw new ChessComError(`Chess.com request failed for ${url}: ${String(error)}`)
-      }
-      await wait(RETRY_DELAY_MS * attempt)
-      continue
+      if (error instanceof ChessComError) throw error
+      failure = String(error)
     }
 
-    if (response.ok) return (await response.json()) as T
-
-    const isRetryable = response.status === 429 || response.status >= 500
-    if (!isRetryable || isLastAttempt) {
-      throw new ChessComError(`Chess.com returned ${response.status} for ${url}`)
-    }
+    if (isLastAttempt) throw new ChessComError(`Chess.com request failed for ${url}: ${failure}`)
     await wait(RETRY_DELAY_MS * attempt)
   }
 }
@@ -126,14 +124,19 @@ function getArchivesUrl(accountId: AccountId) {
   return `${API_BASE_URL}/${getAccount(accountId).username.toLowerCase()}/games/archives`
 }
 
+/** Archive URLs of every month with games, oldest first. */
+const fetchArchiveUrls = cache(async (accountId: AccountId): Promise<string[]> => {
+  const { archives } = await fetchJson<ChessComArchives>(
+    getArchivesUrl(accountId),
+    RECENT_REVALIDATE_SECONDS,
+  )
+  return archives
+})
+
 /** Every game the account has played, oldest month first. Throws on failure. */
 export const fetchAccountGames = cache(
   async (accountId: AccountId): Promise<ChessComGame[]> => {
-    const { archives } = await fetchJson<ChessComArchives>(
-      getArchivesUrl(accountId),
-      RECENT_REVALIDATE_SECONDS,
-    )
-
+    const archives = await fetchArchiveUrls(accountId)
     const recentSuffixes = getRecentArchiveSuffixes(new Date())
     const months = await mapWithConcurrency(
       archives,
@@ -149,8 +152,10 @@ export const fetchAccountGames = cache(
 const ARCHIVE_MONTH_PATTERN = /^(\d{4})-(0[1-9]|1[0-2])$/
 
 /**
- * One game, raw. With a month hint ("2026-11") it reads only that month's
- * archive; without one, or if the game isn't there, the whole history.
+ * One game, raw. A month hint ("2026-11") reads only that month's archive,
+ * and only if the account has one for that month: arbitrary months never
+ * reach Chess.com. Without a usable hint, or if the game isn't there (or the
+ * month fails), it searches the whole history.
  */
 export async function findAccountGame(
   accountId: AccountId,
@@ -159,13 +164,21 @@ export async function findAccountGame(
 ): Promise<ChessComGame | null> {
   const hint = monthHint?.match(ARCHIVE_MONTH_PATTERN)
   if (hint) {
-    const archiveUrl = `${getArchivesUrl(accountId).replace(/\/archives$/, "")}/${hint[1]}/${hint[2]}`
-    const month = await fetchJson<ChessComMonth>(
-      archiveUrl,
-      getArchiveRevalidateSeconds(archiveUrl, getRecentArchiveSuffixes(new Date())),
-    )
-    const game = month.games.find((candidate) => candidate.uuid === uuid)
-    if (game) return game
+    const archives = await fetchArchiveUrls(accountId)
+    const archiveUrl = archives.find((url) => url.endsWith(`/${hint[1]}/${hint[2]}`))
+    if (archiveUrl) {
+      try {
+        const month = await fetchJson<ChessComMonth>(
+          archiveUrl,
+          getArchiveRevalidateSeconds(archiveUrl, getRecentArchiveSuffixes(new Date())),
+        )
+        const game = month.games.find((candidate) => candidate.uuid === uuid)
+        if (game) return game
+      } catch (error) {
+        // The full history below is the fallback; anything else is a bug.
+        if (!(error instanceof ChessComError)) throw error
+      }
+    }
   }
 
   const games = await fetchAccountGames(accountId)

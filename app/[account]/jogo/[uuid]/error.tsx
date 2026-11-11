@@ -1,30 +1,29 @@
 "use client"
 
-import { ChevronLeft } from "lucide-react"
-import Link from "next/link"
 import { useParams } from "next/navigation"
 import { useEffect } from "react"
 
+import { BackToListLink } from "@/components/game-detail/back-to-list-link"
 import { LoadError } from "@/components/load-error"
 import { getChessComArchiveUrl } from "@/lib/accounts"
 
 export default function GameError({ error, retry }: { error: unknown; retry: () => void }) {
-  const { account } = useParams<{ account: string }>()
+  const { account, uuid } = useParams<{ account: string; uuid: string }>()
 
   useEffect(() => {
     console.error(error)
   }, [error])
 
   return (
-    <main id="main-content" tabIndex={-1} className="mx-auto flex flex-col focus-visible:outline-none md:max-w-[720px]">
+    <main
+      id="main-content"
+      tabIndex={-1}
+      className="mx-auto flex flex-col focus-visible:outline-none md:max-w-[720px]"
+    >
+      {/* Same link as the game page: it goes back in history when the reader
+          came from the list, keeping their filters and scroll. */}
       <div className="-mx-1 pt-3">
-        <Link
-          href={`/${encodeURIComponent(account)}`}
-          className="inline-flex min-h-11 items-center gap-1 rounded-control pr-3 pl-1 text-base font-semibold"
-        >
-          <ChevronLeft aria-hidden className="size-5" />
-          Jogos
-        </Link>
+        <BackToListLink accountId={encodeURIComponent(account)} uuid={uuid} />
       </div>
       <LoadError retry={retry} archiveUrl={getChessComArchiveUrl(account)} headingLevel="h1" />
     </main>

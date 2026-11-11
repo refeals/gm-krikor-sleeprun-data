@@ -54,7 +54,12 @@ export function GameBrowser({ accountId, games }: GameBrowserProps) {
       ? [query.year, ...available]
       : available
   }, [games, query.year])
-  const filteredGames = useMemo(() => filterGames(games, query), [games, query])
+  // Depends on the filter fields only: paging and sorting don't re-filter.
+  const { q, result, color, year } = query
+  const filteredGames = useMemo(
+    () => filterGames(games, { q, result, color, year }),
+    [games, q, result, color, year],
+  )
   const sortedGames = useMemo(() => sortGames(filteredGames, query.sort), [filteredGames, query.sort])
 
   // "page" and "size" mean the same on both layouts: the table shows page N,
@@ -79,9 +84,12 @@ export function GameBrowser({ accountId, games }: GameBrowserProps) {
   )
   const openGame = useCallback((game: GameView) => rememberListReturn(game.uuid), [])
 
+  // "Limpar filtros" disappears once the results come back. Focus moves to
+  // the results instead of dropping to <body>.
   function handleClearFilters() {
     clearFilters()
     setSearchFieldKey((key) => key + 1)
+    resultsRef.current?.focus({ preventScroll: true })
   }
 
   // "Carregar mais" can disappear with the last batch. Focus moves to the

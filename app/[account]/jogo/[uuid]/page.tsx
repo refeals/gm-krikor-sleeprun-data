@@ -12,7 +12,7 @@ import type { AccountId } from "@/lib/accounts"
 import { fetchAccountGames } from "@/lib/chess-com"
 import { formatFullDate, formatRatingDelta } from "@/lib/format"
 import { describeGame, formatGameFormat, formatMoveCount } from "@/lib/game-text"
-import { isGameUuid, toGameViews, type GameResult, type GameView } from "@/lib/game-view"
+import { findGameView, isGameUuid, type GameResult, type GameView } from "@/lib/game-view"
 import { requireAccount } from "@/lib/route-params"
 import { cn } from "@/lib/utils"
 
@@ -37,10 +37,10 @@ const BANNER_CLASS: Record<GameResult, string> = {
 const findGame = cache(async (accountId: AccountId, uuid: string) => {
   // Not a game id: 404 before any fetch, so random paths cost nothing.
   if (!isGameUuid(uuid)) return null
-  // The rating delta depends on the previous game, so the whole history is
-  // derived. Every month comes from the fetch cache.
+  // Every month comes from the fetch cache. Only this game and the previous
+  // one in its rating pool are derived, not the whole history.
   const rawGames = await fetchAccountGames(accountId)
-  const game = toGameViews(rawGames, accountId).find((candidate) => candidate.uuid === uuid)
+  const game = findGameView(rawGames, accountId, uuid)
   const pgn = rawGames.find((candidate) => candidate.uuid === uuid)?.pgn
   return game && pgn !== undefined ? { game, pgn } : null
 })

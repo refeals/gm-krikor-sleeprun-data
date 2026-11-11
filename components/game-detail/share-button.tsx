@@ -2,13 +2,14 @@
 
 import { Share } from "lucide-react"
 
-import { useTransientFlag } from "@/hooks/use-transient-flag"
+import { useTransientValue } from "@/hooks/use-transient-flag"
 import { copyText } from "@/lib/clipboard"
 
 const FEEDBACK_MS = 2000
+const FEEDBACK_TEXT = { copied: "Link copiado", failed: "Não foi possível copiar o link" }
 
 export function ShareButton({ title }: { title: string }) {
-  const [isCopied, showCopied] = useTransientFlag(FEEDBACK_MS)
+  const [result, setResult] = useTransientValue<"copied" | "failed">(FEEDBACK_MS)
 
   async function handleShare() {
     const url = window.location.href
@@ -21,13 +22,13 @@ export function ShareButton({ title }: { title: string }) {
         if (error instanceof DOMException && error.name === "AbortError") return
       }
     }
-    if (await copyText(url)) showCopied()
+    setResult((await copyText(url)) ? "copied" : "failed")
   }
 
   return (
     <div className="flex items-center gap-1">
       <span role="status" className="text-sm text-text-secondary">
-        {isCopied ? "Link copiado" : ""}
+        {result ? FEEDBACK_TEXT[result] : ""}
       </span>
       <button
         type="button"

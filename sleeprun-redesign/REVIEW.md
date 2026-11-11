@@ -62,7 +62,7 @@ Regras:
 
 - **Lado do Krikor:** `white.username` ou `black.username` igual à conta, sem diferenciar maiúsculas.
 - **Resultado:** `win` vira vitória. `agreed`, `repetition`, `stalemate`, `insufficient`, `50move` e `timevsinsufficient` viram empate. O resto (`checkmated`, `resigned`, `timeout`, `abandoned`) vira derrota.
-- **`ratingDelta`:** rating deste jogo menos o rating do jogo anterior da mesma conta e do mesmo ritmo, em ordem cronológica. O ritmo importa porque a SleepReRun tem 4 jogos de blitz no meio de 1561 de rápida, e cada ritmo tem seu próprio rating. Se o sinal contradiz o resultado (vitória com delta negativo, derrota com delta positivo) ou se o valor absoluto passa de 300, o jogo é `isRunStart` e `ratingDelta` fica `null`.
+- **`ratingDelta`:** rating deste jogo menos o rating do jogo anterior da mesma conta e do mesmo ritmo, em ordem cronológica. O ritmo importa porque a SleepReRun tem 4 jogos de blitz no meio de 1561 de rápida, e cada ritmo tem seu próprio rating. Se o valor absoluto passa de 300, o jogo é `isRunStart` e `ratingDelta` fica `null`. Um sinal contrário ao resultado não marca reset: um reembolso de rating por fair play entre dois jogos produz isso legitimamente. Nos dados, a regra só por tamanho acha as mesmas 7 e 6 runs.
 - **`openingName`:** tirar o prefixo `https://www.chess.com/openings/`, cortar no primeiro trecho que começa com número de lance (`6.Be3`, `1...d5`) e trocar `-` por espaço. Sem `eco`, `null`. O Chess.com às vezes manda o slug literal `Undefined` (3 jogos na SleepReRun, 5 na SpeedBemRuim), que também vira `null` ("Abertura desconhecida").
 - **`moveCount`:** maior número de lance no movetext do PGN.
 - **Formato da conta:** constante na configuração de contas (`ACCOUNTS`), já que cada conta tem um formato só: SleepReRun "Rápida 10+0", SpeedBemRuim "Blitz 3+0". Assim o header não depende dos dados e continua de pé nas telas de carregamento e erro.
@@ -122,7 +122,7 @@ rating atual
 
 - **Rating atual:** rating do Krikor no jogo mais recente da conta. Ignora filtros. Space Grotesk 700, 44px mobile, 56px desktop.
 - **Sparkline:** rating de cada jogo dentro do filtro de ano, em ordem cronológica. Ignora resultado, cor e busca. Reduzir para o último jogo de cada dia. A linha quebra em cada início de run. Traço de 2px na cor de destaque, ponto no último valor, sem eixos. `role="img"` com `aria-label` calculado, por exemplo "Rating de 408 a 543 entre 1 e 11 de nov de 2026".
-- **Pico:** maior rating dentro do período do sparkline, 12px muted.
+- **Pico:** maior rating dentro do período do sparkline, 12px muted. Pico e mínimo (também no `aria-label`) vêm de todos os jogos do período, não dos pontos da linha, que guardam só o último jogo de cada dia e perderiam extremos no meio do dia. O mínimo da SpeedBemRuim, por exemplo, é 407, enquanto o menor ponto da linha é 480.
 - **Placar:** notação de xadrez, `+V =E −D`, Space Grotesk 20px. O número de vitórias usa a cor de vitória, o de derrotas a de derrota, o de empates a de empate. `aria-label="14 vitórias, 0 empates, 10 derrotas"`. Reflete todos os filtros. Rótulo "placar" abaixo, e o placar nunca quebra linha.
 - **Precisão média:** média da precisão do Krikor nos jogos filtrados que têm análise. Abaixo, "precisão média de N jogos analisados". Se nenhum tiver análise: "—" e "nenhum jogo analisado".
 - **Hover no sparkline:** linha vertical que segue o ponteiro e encaixa no dia mais próximo, com rating e data num tooltip. Funciona com toque (arrastar na horizontal) sem travar a rolagem vertical. A lista de jogos é a versão em tabela do gráfico, então o tooltip é atalho, não o único acesso ao valor.
@@ -208,7 +208,7 @@ Lances     42
 
 - **Linha de rating** no banner: "Rating 1531 (+8)". Em início de run: "Rating 543, início de run".
 - **Precisão:** h2 em sentence case. Duas barras, a do Krikor na cor de destaque. Sem análise, o h2 vira "Jogadores", as linhas dos dois jogadores ficam sem barra e sem porcentagem, e abaixo entra o texto "O Chess.com não tem análise de precisão para este jogo." Assim o nome do oponente aparece nos dois casos.
-- **"Jogos" (voltar):** se o leitor veio da lista, volta no histórico, o que restaura filtros e scroll. A lista grava o `uuid` aberto em `sessionStorage`. Aberto por link compartilhado, o mesmo link leva para `/[account]`.
+- **"Jogos" (voltar):** se o leitor veio da lista, volta no histórico, o que restaura filtros e scroll. A lista grava o `uuid` aberto em memória, não em `sessionStorage`: a marca sobrevive a navegação no cliente, inclusive voltar e avançar, e zera em qualquer carregamento completo. Assim, uma partida aberta por URL digitada nunca volta pelo histórico, o que poderia levar a outro site. Aberto por link compartilhado, o mesmo link leva para `/[account]`.
 - **Abertura e lances:** um `<dl>` sem caixas, separado por linhas finas. Sai o bloco Ritmo, que já está no banner.
 - **Rodapé fixo** com `env(safe-area-inset-bottom)`.
   - "Abrir no Chess.com" abre em nova aba. Leva um ícone SVG de link externo e o texto `sr-only` "(abre em nova aba)".
@@ -415,7 +415,7 @@ Medido com os dados reais em nov/2026: cada conta tem entre 1,5 mil e 1,8 mil jo
 
    A escolha pelo cache do `fetch` vem da doc de `use cache` ("Runtime caching considerations"). Em serverless, o handler padrão do `use cache` fica em memória e normalmente não guarda entradas entre requests. O cache do `fetch` persiste entre requests e entre deploys.
 
-   O Chess.com limita requisições em paralelo, então as buscas rodam no máximo 6 por vez, com até 3 tentativas em resposta 429, 5xx, erro de rede ou timeout (15 s). Cada tentativa leva um `signal` próprio. Sem ele, a deduplicação de `fetch` do Next devolveria a mesma resposta de erro nas tentativas seguintes. Depois de uma falha, nenhuma busca nova começa.
+   O Chess.com limita requisições em paralelo, então as buscas rodam no máximo 6 por vez, com até 3 tentativas em resposta 429, 5xx, erro de rede, timeout (15 s, que vale também para a leitura do corpo) ou JSON inválido (uma página de manutenção servida com 200, por exemplo). Cada tentativa leva um `signal` próprio. Sem ele, a deduplicação de `fetch` do Next devolveria a mesma resposta de erro nas tentativas seguintes. Depois de uma falha, nenhuma busca nova começa.
 4. **Lista estática com ISR**, em `app/[account]/(browse)/page.tsx`:
    - `generateStaticParams` devolve `[]`: nenhuma conta é gerada no build, cada uma é gerada na primeira visita e guardada. Assim o deploy não depende do Chess.com estar no ar; um build que buscasse os jogos falharia junto com a API. Os meses continuam no cache do `fetch`, que sobrevive a deploys: a primeira visita medida levou 1,4 s, e as seguintes 20 ms. Conta desconhecida dá 404 em `requireAccount`, antes de qualquer busca.
    - `export const revalidate = 300`.
@@ -427,11 +427,13 @@ Medido com os dados reais em nov/2026: cada conta tem entre 1,5 mil e 1,8 mil jo
    - usa o `endedAt` para saber o mês
    - busca o mês (também em cache) para ter o PGN
 
+   A página procura a partida crua primeiro e deriva só ela e a anterior do mesmo ritmo (`findGameView`), em vez do histórico inteiro: 0,3 ms contra 67 ms, com resultado idêntico nas 3.316 partidas.
+
    `generateStaticParams` devolve `[]`, então cada página é gerada na primeira visita e guardada. Jogo terminado não muda, mas `revalidate = false` não adiantaria: a página lê o mês corrente (300 s), e um `fetch` com revalidate menor rebaixa a rota inteira. Fica `revalidate = 300` explícito. Um `uuid` fora do formato UUID dá 404 antes de qualquer busca.
 
    Os cards da lista usam `prefetch={false}`. A rota de detalhe é estática, e o prefetch padrão faria o servidor gerar uma página de detalhe por card visível.
 7. **PGN sob demanda para a tabela desktop.**
-   - **Route Handler:** `GET /api/games/[account]/[uuid]/pgn?month=2026-11`, respondendo `text/plain`. Com o mês, lê só aquele arquivo; sem ele, ou se o jogo não estiver lá, o histórico inteiro. Falha do Chess.com vira 502 em texto. Cache: `max-age=86400, s-maxage=2592000` (o CDN da Vercel só guarda com `s-maxage`).
+   - **Route Handler:** `GET /api/games/[account]/[uuid]/pgn?month=2026-11`, respondendo `text/plain`. Com o mês, lê só aquele arquivo, e só se ele estiver na lista de arquivos da conta (já em cache): um mês arbitrário nunca chega ao Chess.com. Sem mês, se o jogo não estiver lá ou se o mês falhar, procura no histórico inteiro. O 404 é guardado no CDN por 1 h. Falha do Chess.com vira 502 em texto. Cache: `max-age=86400, s-maxage=2592000` (o CDN da Vercel só guarda com `s-maxage`).
    - **Rótulos:** "PGN", "Copiado" ou "Erro" visíveis, com complemento `sr-only` ("Copiar PGN da partida contra X"). O nome acessível sempre contém a palavra visível (WCAG 2.5.3). Dois cliques em linhas diferentes que terminam fora de ordem: só a última requisição atualiza o estado.
    - **Cópia:** o botão "PGN" chama `navigator.clipboard.write([new ClipboardItem({ "text/plain": fetchPromise })])`. Passar a Promise para o `ClipboardItem` mantém o gesto do usuário válido no Safari durante o fetch.
    - **Fallback:** sem `ClipboardItem`, busca primeiro e depois usa `writeText`.

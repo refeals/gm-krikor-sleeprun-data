@@ -80,6 +80,19 @@ export function normalizeSearchText(value: string): string {
   return value.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim()
 }
 
+// Normalized "opponent opening" per game, computed once. Keyed by the game
+// object, so it lives exactly as long as the games list does.
+const searchableTextCache = new WeakMap<GameView, string>()
+
+function getSearchableText(game: GameView): string {
+  let text = searchableTextCache.get(game)
+  if (text === undefined) {
+    text = normalizeSearchText(`${game.opponent.username}\n${game.openingName ?? ""}`)
+    searchableTextCache.set(game, text)
+  }
+  return text
+}
+
 export type GameFilters = Pick<GameQuery, "q" | "result" | "color" | "year">
 
 export function filterGames(games: readonly GameView[], filters: GameFilters): GameView[] {
@@ -90,8 +103,7 @@ export function filterGames(games: readonly GameView[], filters: GameFilters): G
     if (filters.year !== null && game.year !== filters.year) return false
     if (!term) return true
     return (
-      normalizeSearchText(game.opponent.username).includes(term) ||
-      normalizeSearchText(game.openingName ?? "").includes(term)
+      getSearchableText(game).includes(term)
     )
   })
 }

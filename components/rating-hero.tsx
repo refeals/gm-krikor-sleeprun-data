@@ -28,19 +28,19 @@ export function RatingHero({ games, filteredGames, year, timeClass }: RatingHero
     () => games.filter((game) => game.rules === "chess" && game.timeClass === timeClass),
     [games, timeClass],
   )
-  const series = useMemo(
-    () =>
-      buildRatingSeries(
-        year === null ? formatGames : formatGames.filter((game) => game.year === year),
-      ),
+  const periodGames = useMemo(
+    () => (year === null ? formatGames : formatGames.filter((game) => game.year === year)),
     [formatGames, year],
   )
+  const series = useMemo(() => buildRatingSeries(periodGames), [periodGames])
   const summary = useMemo(() => summarizeGames(filteredGames), [filteredGames])
 
   const currentRating = formatGames.at(-1)?.rating
   if (currentRating === undefined) return null
 
-  const ratings = series.map((point) => point.rating)
+  // Extremes come from every game in the period, not from the line, which
+  // keeps only each day's last game and would miss an intraday peak or low.
+  const ratings = periodGames.map((game) => game.rating)
   const peak = ratings.length > 0 ? Math.max(...ratings) : currentRating
   const lowest = ratings.length > 0 ? Math.min(...ratings) : currentRating
   const runCount = new Set(series.map((point) => point.runIndex)).size
@@ -73,7 +73,13 @@ export function RatingHero({ games, filteredGames, year, timeClass }: RatingHero
       </div>
 
       {hasLine ? (
-        <RatingSparkline points={series} label={sparklineLabel} className="h-16 md:h-24" />
+        // Keyed by the period so a hover position from another series never carries over.
+        <RatingSparkline
+          key={year ?? "all"}
+          points={series}
+          label={sparklineLabel}
+          className="h-16 md:h-24"
+        />
       ) : (
         <div aria-hidden className="hidden md:block" />
       )}

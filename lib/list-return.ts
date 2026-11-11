@@ -1,24 +1,19 @@
 // Remembers which game the reader opened from the list, so the game page's
 // "Jogos" link can go back in history (restoring filters and scroll) instead
-// of opening a fresh list. The mark stays until another game is opened from
-// the list, so it also works after going back and forward. Session storage
-// can be unavailable; then the link simply navigates to the list.
+// of opening a fresh list.
+//
+// Kept in memory on purpose. It survives client navigations, including back
+// and forward, and resets on any full page load. A game reached by a typed
+// or shared URL therefore never sends the reader back through history, which
+// could leave the site.
 
-const STORAGE_KEY = "sleeprun:list-return"
+let openedFromListUuid: string | null = null
 
 export function rememberListReturn(uuid: string) {
-  try {
-    sessionStorage.setItem(STORAGE_KEY, uuid)
-  } catch {
-    // Storage blocked: the back link falls back to a normal navigation.
-  }
+  openedFromListUuid = uuid
 }
 
-/** True if the reader reached this game from the list. */
+/** True if the reader reached this game from the list in this page session. */
 export function cameFromList(uuid: string): boolean {
-  try {
-    return sessionStorage.getItem(STORAGE_KEY) === uuid
-  } catch {
-    return false
-  }
+  return openedFromListUuid === uuid
 }

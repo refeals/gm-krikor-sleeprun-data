@@ -3,7 +3,7 @@ import Link from "next/link"
 import { PieceSquare, RatingChange, ResultBadge } from "@/components/game-marks"
 import { LinkPendingBar } from "@/components/link-pending"
 import { formatAccuracy, formatGameDate } from "@/lib/format"
-import { formatGameFormat } from "@/lib/game-text"
+import { COLOR_NAME, formatGameFormat } from "@/lib/game-text"
 import type { GameView } from "@/lib/game-view"
 
 type GameCardProps = {
@@ -45,7 +45,7 @@ export function GameCard({ game, href, accountTimeClass, onNavigate }: GameCardP
           <span className="shrink-0 text-xs font-medium text-text-muted tabular-nums">
             {game.opponent.rating}
           </span>
-          <span className="sr-only">, Krikor de {game.color === "white" ? "brancas" : "pretas"}</span>
+          <span className="sr-only">, Krikor de {COLOR_NAME[game.color]}</span>
         </span>
         <span className="truncate text-sm text-text-secondary">
           {game.openingName ?? "Abertura desconhecida"}

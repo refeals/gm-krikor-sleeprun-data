@@ -7,18 +7,26 @@ import { isGameUuid } from "@/lib/game-view"
 // PGN of one game, for "Copiar PGN" in the desktop table. The list payload
 // leaves PGNs out because they are 70% of the data. The client passes the
 // game's archive month (?month=2026-11) so only that month is read.
+
+// The CDN keeps 404s for an hour, so repeated requests for ids that don't
+// exist stop at the edge instead of reading the account's history again.
+function notFound() {
+  return new Response("Not found", {
+    status: 404,
+    headers: { "Cache-Control": "public, max-age=300, s-maxage=3600" },
+  })
+}
+
 export async function GET(
   request: NextRequest,
   context: RouteContext<"/api/games/[account]/[uuid]/pgn">,
 ) {
   const { account, uuid } = await context.params
-  if (!isAccountId(account) || !isGameUuid(uuid)) {
-    return new Response("Not found", { status: 404 })
-  }
+  if (!isAccountId(account) || !isGameUuid(uuid)) return notFound()
 
   try {
     const game = await findAccountGame(account, uuid, request.nextUrl.searchParams.get("month"))
-    if (!game) return new Response("Not found", { status: 404 })
+    if (!game) return notFound()
 
     return new Response(game.pgn, {
       headers: {

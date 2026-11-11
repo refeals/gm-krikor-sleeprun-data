@@ -9,6 +9,8 @@ import { LinkPendingSpinner } from "@/components/link-pending"
 import { useTransientValue } from "@/hooks/use-transient-flag"
 import { copyTextFrom } from "@/lib/clipboard"
 import { formatAccuracy, formatGameDate } from "@/lib/format"
+import { isModifiedClick } from "@/lib/events"
+import { COLOR_NAME } from "@/lib/game-text"
 import { toArchiveMonth, type GameView } from "@/lib/game-view"
 
 const FEEDBACK_MS = 2000
@@ -62,7 +64,7 @@ export function GameTable({ accountId, games, caption, gameHref, onOpenGame }: G
   function handleRowClick(event: MouseEvent<HTMLTableRowElement>, game: GameView) {
     if ((event.target as HTMLElement).closest("a, button")) return
     if (window.getSelection()?.toString()) return
-    if (event.metaKey || event.ctrlKey || event.shiftKey) {
+    if (isModifiedClick(event)) {
       window.open(gameHref(game), "_blank", "noopener")
       return
     }
@@ -144,7 +146,7 @@ export function GameTable({ accountId, games, caption, gameHref, onOpenGame }: G
                     <LinkPendingSpinner />
                   </Link>
                   <span className="text-xs text-text-muted tabular-nums">{game.opponent.rating}</span>
-                  <span className="sr-only">, Krikor de {game.color === "white" ? "brancas" : "pretas"}</span>
+                  <span className="sr-only">, Krikor de {COLOR_NAME[game.color]}</span>
                 </span>
               </td>
               <td

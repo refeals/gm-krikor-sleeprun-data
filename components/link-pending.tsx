@@ -14,7 +14,11 @@ export function LinkPendingBar() {
       aria-hidden
       className={`pointer-events-none absolute inset-x-3 bottom-0 h-0.5 overflow-hidden rounded-full transition-opacity duration-150 ${pending ? "opacity-100" : "opacity-0"}`}
     >
-      <span className="block h-full w-1/3 animate-link-pending rounded-full bg-accent motion-reduce:w-full motion-reduce:animate-none" />
+      {/* Animated only while pending: every card has a bar, and an idle
+          infinite animation per card adds up after "Carregar mais". */}
+      {pending ? (
+        <span className="block h-full w-1/3 animate-link-pending rounded-full bg-accent motion-reduce:w-full motion-reduce:animate-none" />
+      ) : null}
     </span>
   )
 }

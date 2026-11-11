@@ -1,5 +1,6 @@
 import { PieceSquare } from "@/components/game-marks"
 import { formatAccuracy } from "@/lib/format"
+import { COLOR_NAME } from "@/lib/game-text"
 import type { GameView, PieceColor } from "@/lib/game-view"
 import { cn } from "@/lib/utils"
 
@@ -21,7 +22,7 @@ function PlayerRow({ name, rating, color, accuracy, barClassName }: PlayerRowPro
           {rating !== undefined ? (
             <span className="text-xs font-medium text-text-muted tabular-nums"> {rating}</span>
           ) : null}
-          <span className="sr-only">, {color === "white" ? "brancas" : "pretas"}</span>
+          <span className="sr-only">, {COLOR_NAME[color]}</span>
         </span>
         {accuracy !== null ? (
           <span className="font-display text-lg font-bold tabular-nums">{formatAccuracy(accuracy)}</span>

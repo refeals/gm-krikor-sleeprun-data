@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { startTransition, useOptimistic, type MouseEvent } from "react"
 
 import { ACCOUNTS, getAccount, type AccountId } from "@/lib/accounts"
+import { isModifiedClick } from "@/lib/events"
 import { cn } from "@/lib/utils"
 
 /**
@@ -24,9 +25,7 @@ export function AccountHeader({ currentId }: { currentId: AccountId }) {
   const selected = getAccount(selectedId)
 
   function handleClick(event: MouseEvent<HTMLAnchorElement>, accountId: AccountId) {
-    const opensElsewhere =
-      event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey
-    if (opensElsewhere) return
+    if (isModifiedClick(event)) return
     event.preventDefault()
     if (accountId === selectedId) return
 
