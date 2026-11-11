@@ -179,14 +179,6 @@ export function GameTable({ accountId, games, caption, gameHref, onOpenGame }: G
               </td>
               <td className={cellClassName}>
                 <span className="flex justify-end gap-2">
-                  {game.url ? (
-                    <a href={game.url} target="_blank" rel="noopener noreferrer" className={actionClassName}>
-                      <span className="sr-only">Abrir partida contra {game.opponent.username} no </span>
-                      Chess.com
-                      <ExternalLink aria-hidden className="size-3.5" />
-                      <span className="sr-only"> (abre em nova aba)</span>
-                    </a>
-                  ) : null}
                   {game.video ? (
                     // Icon only, so the actions still fit beside the columns.
                     <a
@@ -201,6 +193,17 @@ export function GameTable({ accountId, games, caption, gameHref, onOpenGame }: G
                         Assistir {game.video.isCertain ? "o episódio" : "o provável episódio"} da partida contra{" "}
                         {game.opponent.username} no YouTube (abre em nova aba)
                       </span>
+                    </a>
+                  ) : (
+                    // Keeps the other actions in line with the rows that have a video.
+                    <span aria-hidden className="w-11 shrink-0" />
+                  )}
+                  {game.url ? (
+                    <a href={game.url} target="_blank" rel="noopener noreferrer" className={actionClassName}>
+                      <span className="sr-only">Abrir partida contra {game.opponent.username} no </span>
+                      Chess.com
+                      <ExternalLink aria-hidden className="size-3.5" />
+                      <span className="sr-only"> (abre em nova aba)</span>
                     </a>
                   ) : null}
                   <button
