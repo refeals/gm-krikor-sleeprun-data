@@ -1,4 +1,5 @@
 import type { AccountId } from "@/lib/accounts"
+import { getYearInAppTimeZone } from "@/lib/format"
 import type { ChessComGame } from "@/types/chess-com"
 
 export type GameResult = "win" | "draw" | "loss"
@@ -13,6 +14,8 @@ export type GameView = {
   url: string
   /** Epoch milliseconds. */
   endedAt: number
+  /** Calendar year in the app time zone, used by the year filter. */
+  year: number
   result: GameResult
   /** Chess.com result code of the side that lost, or of either side on a draw. */
   termination: string
@@ -122,6 +125,7 @@ export function toGameViews(
       uuid: game.uuid,
       url: game.url,
       endedAt: game.end_time * 1000,
+      year: getYearInAppTimeZone(game.end_time * 1000),
       result,
       termination: result === "win" ? opponent.result : own.result,
       color,

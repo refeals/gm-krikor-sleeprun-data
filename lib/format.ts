@@ -1,11 +1,28 @@
-import { format, isSameYear } from "date-fns"
-import { ptBR } from "date-fns/locale"
+// Dates are shown in Brazil's time zone everywhere. Pages render on servers
+// running in UTC, and a game played at 23:00 in São Paulo would otherwise
+// show the next day there and a different day on the reader's screen.
+export const APP_TIME_ZONE = "America/Sao_Paulo"
 
 const accuracyFormatter = new Intl.NumberFormat("pt-BR", {
   minimumFractionDigits: 1,
   maximumFractionDigits: 1,
 })
 const countFormatter = new Intl.NumberFormat("pt-BR")
+const dayMonthFormatter = new Intl.DateTimeFormat("pt-BR", {
+  timeZone: APP_TIME_ZONE,
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+})
+const monthYearFormatter = new Intl.DateTimeFormat("pt-BR", {
+  timeZone: APP_TIME_ZONE,
+  month: "long",
+  year: "numeric",
+})
+const yearFormatter = new Intl.DateTimeFormat("en-US", {
+  timeZone: APP_TIME_ZONE,
+  year: "numeric",
+})
 
 const MINUS_SIGN = "−"
 
@@ -26,20 +43,34 @@ export function formatRatingDelta(delta: number): string {
   return "±0"
 }
 
-/** "9 nov" in the current year, "9 nov 2024" otherwise. */
-export function formatGameDate(timestamp: number, now = new Date()): string {
-  const date = new Date(timestamp)
-  return format(date, isSameYear(date, now) ? "d MMM" : "d MMM yyyy", { locale: ptBR })
+/** Calendar year of a timestamp in the app time zone. */
+export function getYearInAppTimeZone(timestamp: number): number {
+  return Number(yearFormatter.format(timestamp))
+}
+
+function getDateParts(timestamp: number) {
+  const parts = dayMonthFormatter.formatToParts(timestamp)
+  const read = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value ?? ""
+  // pt-BR abbreviations end in a period ("nov."); the design drops it.
+  return { day: read("day"), month: read("month").replace(/\.$/, ""), year: read("year") }
 }
 
 /** "9 nov 2026". */
 export function formatFullDate(timestamp: number): string {
-  return format(new Date(timestamp), "d MMM yyyy", { locale: ptBR })
+  const { day, month, year } = getDateParts(timestamp)
+  return `${day} ${month} ${year}`
+}
+
+/** "9 nov" in the current year, "9 nov 2024" otherwise. */
+export function formatGameDate(timestamp: number, now = Date.now()): string {
+  const { day, month, year } = getDateParts(timestamp)
+  return Number(year) === getYearInAppTimeZone(now) ? `${day} ${month}` : `${day} ${month} ${year}`
 }
 
 /** "abril de 2021". */
 export function formatMonthYear(timestamp: number): string {
-  return format(new Date(timestamp), "MMMM 'de' yyyy", { locale: ptBR })
+  return monthYearFormatter.format(timestamp)
 }
 
 /** "600" → "10+0", "180+2" → "3+2". */

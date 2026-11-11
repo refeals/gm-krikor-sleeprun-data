@@ -41,6 +41,7 @@ type GameView = {
   uuid: string
   url: string
   endedAt: number              // epoch em ms
+  year: number                 // ano no fuso de São Paulo, para o filtro
   result: GameResult
   termination: string          // código do Chess.com: checkmated, resigned, timeout, agreed…
   color: PieceColor            // cor do Krikor
@@ -71,7 +72,7 @@ Regras:
 - Rating sem separador de milhar, como no xadrez: `1531`.
 - Precisão com uma casa e vírgula: `93,4%`.
 - Contagens com separador: `1.234 partidas`.
-- Data: `9 nov` no ano corrente, `9 nov 2024` nos outros anos (date-fns com `ptBR`).
+- Data: `9 nov` no ano corrente, `9 nov 2024` nos outros anos, sempre no fuso `America/Sao_Paulo` (via `Intl`). As páginas renderizam em servidor UTC, e um jogo às 23h em São Paulo sairia com o dia seguinte. O ano do filtro (`GameView.year`) é calculado no servidor no mesmo fuso.
 - Sinal de menos é U+2212 (`−7`), não hífen.
 
 ## 3. Rotas e estado
@@ -82,7 +83,7 @@ Regras:
 - `app/[account]/layout.tsx` valida a conta. O header da lista (seletor de conta, h1, linha de formato) fica no grupo `app/[account]/(browse)/layout.tsx`, junto com a página da lista, o `loading.tsx` e o `error.tsx`, que assim mantêm o header de pé. O detalhe fica fora do grupo porque tem cabeçalho próprio.
 - No Next 16, `params` é uma Promise: `const { account } = await params`.
 - Filtros na query string, com as mesmas chaves do código: `q`, `result` (`win|draw|loss`), `color` (`white|black`), `year`, `sort` (`newest|oldest|accuracy`), `page`, `size`. Valor padrão não aparece na URL.
-- A URL é a fonte da verdade. O store de filtros do zustand sai. A busca atualiza a URL com `router.replace` depois de 300 ms sem digitar.
+- A URL é a fonte da verdade. O store de filtros do zustand sai. A busca atualiza a URL depois de 300 ms sem digitar. Toda escrita na URL usa `window.history.replaceState`, que o Next sincroniza com `useSearchParams` sem ir ao servidor. `router.replace` buscaria de novo o payload da página, com todos os jogos, a cada filtro.
 - `page` serve aos dois layouts. No mobile, "Carregar mais" incrementa `page` e a lista mostra os itens de `0` até `page × 25`. No desktop, `page` e `size` fatiam a tabela.
 - A página rola o documento. Nada de altura fixa com scroll interno, como nos frames de 390×844. Assim o Next restaura o scroll ao voltar do detalhe e a barra do iOS funciona.
 - Trocar de conta é navegar para `/[account]`, com o mesmo `loading.tsx` de skeleton.
@@ -114,8 +115,9 @@ rating atual
 - **Rating atual:** rating do Krikor no jogo mais recente da conta. Ignora filtros. Space Grotesk 700, 44px mobile, 56px desktop.
 - **Sparkline:** rating de cada jogo dentro do filtro de ano, em ordem cronológica. Ignora resultado, cor e busca. Reduzir para o último jogo de cada dia. A linha quebra em cada início de run. Traço de 2px na cor de destaque, ponto no último valor, sem eixos. `role="img"` com `aria-label` calculado, por exemplo "Rating de 408 a 543 entre 1 e 11 de nov de 2026".
 - **Pico:** maior rating dentro do período do sparkline, 12px muted.
-- **Placar:** notação de xadrez, `+V =E −D`, Space Grotesk 20px. O número de vitórias usa a cor de vitória, o de derrotas a de derrota, o de empates a de empate. `aria-label="14 vitórias, 0 empates, 10 derrotas"`. Reflete todos os filtros.
-- **Precisão média:** média da precisão do Krikor nos jogos filtrados que têm análise. Abaixo, "média de N jogos analisados". Se nenhum tiver análise: "—" e "nenhum jogo analisado".
+- **Placar:** notação de xadrez, `+V =E −D`, Space Grotesk 20px. O número de vitórias usa a cor de vitória, o de derrotas a de derrota, o de empates a de empate. `aria-label="14 vitórias, 0 empates, 10 derrotas"`. Reflete todos os filtros. Rótulo "placar" abaixo, e o placar nunca quebra linha.
+- **Precisão média:** média da precisão do Krikor nos jogos filtrados que têm análise. Abaixo, "precisão média de N jogos analisados". Se nenhum tiver análise: "—" e "nenhum jogo analisado".
+- **Hover no sparkline:** linha vertical que segue o ponteiro e encaixa no dia mais próximo, com rating e data num tooltip. Funciona com toque (arrastar na horizontal) sem travar a rolagem vertical. A lista de jogos é a versão em tabela do gráfico, então o tooltip é atalho, não o único acesso ao valor.
 - **Desktop:** a partir de 1024px, três colunas (`auto 1fr auto`, alinhadas na base, gap 32px), com o sparkline de 96px no meio. Entre 768 e 1023px, rating e placar na primeira linha e sparkline na segunda.
 
 ### Barra de busca e filtros (mobile)
@@ -139,11 +141,11 @@ rating atual
 - **Badge:** 44×44, raio 12, letra V/E/D sobre a cor do resultado. O nome do resultado vai em texto `sr-only` ("Vitória"). `aria-label` num `<span>` não é lido por leitor de tela.
 - **Linha 1** (15px, 600): quadrado da peça (10px, `aria-hidden`), "vs {oponente}" com reticências, rating do oponente em 12px muted.
 - **Linha 2** (13px, secundário): abertura com reticências.
-- **Linha 3** (12px, muted): "Precisão 93,4%, 9 nov". Sem análise, só a data.
+- **Linha 3** (12px, muted): "Precisão 93,4%, 9 nov". Sem análise, só a data. Jogo em outro ritmo que o da conta (a SleepReRun tem 4 de blitz) começa a linha pelo formato: "Blitz 3+0, precisão 88,1%, 2 mar 2022".
 - **Coluna direita:** rating do Krikor (Space Grotesk 17px), e abaixo o delta em 12px 600. "+8" na cor de vitória, "−7" na de derrota, "±0" muted. Em início de run: "nova run", muted.
 - Saem do card: "Brancas" (o quadrado da peça já diz), "Blitz" (está no header) e o número de lances (está no detalhe e na tabela).
 - Ponteiro: borda passa para `--color-border-strong` em 150 ms. Toque: fundo `--color-surface-pressed`.
-- "Carregar mais" no fim da lista, botão secundário de 48px: "Carregar mais 25". Some quando acabar.
+- "Carregar mais" no fim da lista, botão secundário de 48px: "Carregar mais 25", ou o que faltar quando sobrarem menos de 25. Some quando acabar.
 
 ### Sheet de filtros (mobile)
 
@@ -197,7 +199,8 @@ Lances     42
   | `timevsinsufficient` | no tempo, com material insuficiente |
 
 - **Linha de rating** no banner: "Rating 1531 (+8)". Em início de run: "Rating 543, início de run".
-- **Precisão:** h2 em sentence case. Duas barras, a do Krikor na cor de destaque. Sem análise, as barras dão lugar ao texto "O Chess.com não tem análise de precisão para este jogo."
+- **Precisão:** h2 em sentence case. Duas barras, a do Krikor na cor de destaque. Sem análise, o h2 vira "Jogadores", as linhas dos dois jogadores ficam sem barra e sem porcentagem, e abaixo entra o texto "O Chess.com não tem análise de precisão para este jogo." Assim o nome do oponente aparece nos dois casos.
+- **"Jogos" (voltar):** se o leitor veio da lista, volta no histórico, o que restaura filtros e scroll. A lista grava o `uuid` aberto em `sessionStorage`. Aberto por link compartilhado, o mesmo link leva para `/[account]`.
 - **Abertura e lances:** um `<dl>` sem caixas, separado por linhas finas. Sai o bloco Ritmo, que já está no banner.
 - **Rodapé fixo** com `env(safe-area-inset-bottom)`.
   - "Abrir no Chess.com" abre em nova aba. Leva um ícone SVG de link externo e o texto `sr-only` "(abre em nova aba)".

@@ -81,10 +81,6 @@ export function normalizeSearchText(value: string): string {
   return value.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim()
 }
 
-export function getGameYear(game: GameView): number {
-  return new Date(game.endedAt).getFullYear()
-}
-
 export type GameFilters = Pick<GameQuery, "q" | "result" | "color" | "year">
 
 export function filterGames(games: readonly GameView[], filters: GameFilters): GameView[] {
@@ -92,7 +88,7 @@ export function filterGames(games: readonly GameView[], filters: GameFilters): G
   return games.filter((game) => {
     if (filters.result !== "all" && game.result !== filters.result) return false
     if (filters.color !== "all" && game.color !== filters.color) return false
-    if (filters.year !== null && getGameYear(game) !== filters.year) return false
+    if (filters.year !== null && game.year !== filters.year) return false
     if (!term) return true
     return (
       normalizeSearchText(game.opponent.username).includes(term) ||
@@ -116,7 +112,7 @@ export function sortGames(games: readonly GameView[], sort: SortOrder): GameView
 
 /** Years with at least one game, newest first. */
 export function getAvailableYears(games: readonly GameView[]): number[] {
-  return [...new Set(games.map(getGameYear))].sort((a, b) => b - a)
+  return [...new Set(games.map((game) => game.year))].sort((a, b) => b - a)
 }
 
 /** Filters that live in the filter sheet (the result chips are outside it). */
