@@ -1,4 +1,5 @@
-import { AccountSwitcher } from "@/components/account-switcher"
+import { AccountHeader } from "@/components/account-header"
+import { GameBrowserSkeleton } from "@/components/game-browser-skeleton"
 import { requireAccount } from "@/lib/route-params"
 
 // The header lives in a layout so it stays up in loading.tsx and error.tsx.
@@ -7,19 +8,16 @@ export default async function BrowseLayout({ children, params }: LayoutProps<"/[
   const account = await requireAccount(params)
 
   return (
-    <>
-      {/* DOM order is title, then switcher, which is also the reading order.
-          Mobile shows the switcher on top; desktop puts it on the right. */}
-      <header className="flex flex-col-reverse gap-3 pt-4 pb-2 md:flex-row md:items-center md:justify-between md:gap-6 md:pt-8">
-        <div className="flex flex-col gap-1">
-          <h1 className="font-display text-3xl font-bold md:text-4xl">Jogos do GM Krikor</h1>
-          <p className="text-sm text-text-muted">{account.timeControlLabel} no Chess.com</p>
-        </div>
-        <AccountSwitcher currentId={account.id} />
-      </header>
+    // While the header reports a pending account switch (data-pending), the
+    // list is swapped for its skeleton. CSS only; the header announces it.
+    <div className="group">
+      <AccountHeader currentId={account.id} />
       <main id="main-content" tabIndex={-1} className="focus-visible:outline-none">
-        {children}
+        <div className="group-has-data-pending:hidden">{children}</div>
+        <div className="hidden group-has-data-pending:block">
+          <GameBrowserSkeleton isAnnounced={false} />
+        </div>
       </main>
-    </>
+    </div>
   )
 }

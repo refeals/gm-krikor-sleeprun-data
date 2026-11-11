@@ -100,6 +100,14 @@ Rápida 10+0 no Chess.com           13px, muted
 
 O seletor é um par de links para `/sleeprerun` e `/speedbemruim`, com `aria-current="page"` no ativo. A linha de formato substitui o "Blitz" que saiu dos cards e aparece em todas as larguras, inclusive no carregamento e no erro. No DOM, o título vem antes do seletor (ordem de leitura); no mobile o seletor aparece em cima via `flex-col-reverse`, no desktop à direita.
 
+**Troca de conta otimista.** O header é um Client Component (`AccountHeader`). No clique, `useOptimistic` dentro de `startTransition` com `router.push`, como a doc do Next 16 recomenda:
+- a conta escolhida acende e a linha de formato muda no mesmo frame;
+- o header ganha `data-pending`, e o layout troca a lista pelo skeleton só com CSS (`group-has-data-pending:`);
+- o leitor de tela ouve "Carregando jogos da SpeedBemRuim…";
+- `aria-current` só muda quando a navegação termina.
+
+Clique com modificador (nova aba) segue o link normal. Medido: com `loading.tsx` no segmento, o Next não faz prefetch de nada da outra conta, nem no viewport nem com `router.prefetch` no hover. Os ~850 KB vêm no clique, por isso o estado pendente precisa ser explícito.
+
 ### Destaque (topo da lista)
 
 Substitui os quatro blocos de resumo do mobile e do desktop. Sem caixa em volta.
@@ -264,7 +272,12 @@ Mostrando 1–25 de 1.234          Linhas por página [25]       ‹ 1 2 3 … 5
 
 - **Filtros sem resultado:** "Nenhum jogo com esses filtros." e um botão secundário "Limpar filtros", que limpa busca, resultado, cor e ano. Ordenação e tamanho de página ficam, porque não são filtros.
 - **Conta sem partidas** (a API respondeu com lista vazia): "Essa conta ainda não tem partidas no Chess.com."
-- **Endereço inexistente:** `app/not-found.tsx` em português: "Página não encontrada", "Esse endereço não leva a uma conta nem a uma partida." e o botão "Ver jogos do GM Krikor".
+- **Telas de status:** 404 e erros usam o mesmo componente (`StatusScreen`): ícone, título, uma frase e as saídas.
+- **Endereço inexistente** (`app/not-found.tsx`): "Página não encontrada", "Esse endereço não leva a uma conta nem a uma partida." e um botão por conta ("Ver jogos da SleepRun", "Ver jogos da SpeedBemRuim").
+- **Partida inexistente** (`app/[account]/jogo/[uuid]/not-found.tsx`): "Partida não encontrada", "Não há partida com esse endereço na conta SleepReRun." e "Ver jogos da SleepRun".
+- **Erro fora da lista e do detalhe** (`app/error.tsx`, por exemplo num layout de conta): "Não foi possível abrir esta página", "Tente de novo. Se o erro continuar, comece pela lista de jogos.", com "Tentar de novo" e "Ver jogos do GM Krikor". O rodapé fica.
+- **Erro no layout raiz** (`app/global-error.tsx`): a mesma tela, com documento, estilos e fontes próprios (`app/fonts.ts` é compartilhado com o layout raiz) e `<title>Erro | SleepRun</title>`.
+- As cinco telas foram testadas no navegador. Os erros foram forçados com um `throw` temporário, já revertido.
 
 ### Rodapé (todas as telas)
 
@@ -365,7 +378,10 @@ Vocabulário único: a ação que se chama "Copiar PGN" confirma com "PGN copiad
 | Lista | Carregar mais 25 |
 | Detalhe | Jogos · Compartilhar · Precisão · Abertura · Lances · Abrir no Chess.com · Copiar PGN |
 | Retornos | PGN copiado · Link copiado · na tabela: PGN, Copiado, Erro (leitor de tela: "PGN copiado", "Não foi possível copiar o PGN") |
-| Navegação | Pular para o conteúdo · Página não encontrada · Esse endereço não leva a uma conta nem a uma partida. · Ver jogos do GM Krikor |
+| Navegação | Pular para o conteúdo · Página não encontrada · Esse endereço não leva a uma conta nem a uma partida. · Ver jogos da SleepRun · Ver jogos da SpeedBemRuim |
+| 404 de partida | Partida não encontrada · Não há partida com esse endereço na conta {usuário}. |
+| Erro de página | Não foi possível abrir esta página · Tente de novo. Se o erro continuar, comece pela lista de jogos. · Tentar de novo · Ver jogos do GM Krikor |
+| Troca de conta | Carregando jogos da {conta}… (leitor de tela) |
 | Sem análise | O Chess.com não tem análise de precisão para este jogo. |
 | Carregando | Carregando jogos… |
 | Erro | O Chess.com não respondeu · A lista de jogos vem da API pública do Chess.com. Tente de novo em alguns minutos. · Tentar de novo · Ver jogos no Chess.com |

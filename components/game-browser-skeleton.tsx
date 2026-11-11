@@ -8,12 +8,15 @@ const CHIP_WIDTHS = [72, 92, 92, 96]
  * table from 768px), so nothing jumps when the games arrive. It is also the
  * HTML sent before hydration. The status text is for screen readers only.
  */
-export function GameBrowserSkeleton() {
+export function GameBrowserSkeleton({ isAnnounced = true }: { isAnnounced?: boolean }) {
   return (
     <div aria-busy="true">
-      <p role="status" className="sr-only">
-        Carregando jogos…
-      </p>
+      {/* Off when someone else announces the wait, like the account switcher. */}
+      {isAnnounced ? (
+        <p role="status" className="sr-only">
+          Carregando jogos…
+        </p>
+      ) : null}
 
       <div aria-hidden className="flex animate-pulse flex-col">
         <div className={`hidden h-6 w-[560px] max-w-full md:mb-2 md:block ${block}`} />
