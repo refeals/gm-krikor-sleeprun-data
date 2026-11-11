@@ -1,20 +1,14 @@
 "use client"
 
 import { Share } from "lucide-react"
-import { useEffect, useState } from "react"
 
+import { useTransientFlag } from "@/hooks/use-transient-flag"
 import { copyText } from "@/lib/clipboard"
 
 const FEEDBACK_MS = 2000
 
 export function ShareButton({ title }: { title: string }) {
-  const [isCopied, setIsCopied] = useState(false)
-
-  useEffect(() => {
-    if (!isCopied) return
-    const timer = setTimeout(() => setIsCopied(false), FEEDBACK_MS)
-    return () => clearTimeout(timer)
-  }, [isCopied])
+  const [isCopied, showCopied] = useTransientFlag(FEEDBACK_MS)
 
   async function handleShare() {
     const url = window.location.href
@@ -27,7 +21,7 @@ export function ShareButton({ title }: { title: string }) {
         if (error instanceof DOMException && error.name === "AbortError") return
       }
     }
-    if (await copyText(url)) setIsCopied(true)
+    if (await copyText(url)) showCopied()
   }
 
   return (

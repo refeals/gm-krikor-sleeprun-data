@@ -3,7 +3,7 @@
 import { useMemo } from "react"
 
 import { RatingSparkline } from "@/components/rating-sparkline"
-import { formatAccuracy, formatCount, formatFullDate } from "@/lib/format"
+import { formatAccuracy, formatCount, formatFullDate, MINUS_SIGN } from "@/lib/format"
 import { buildRatingSeries, summarizeGames } from "@/lib/game-stats"
 import type { GameView } from "@/lib/game-view"
 
@@ -16,13 +16,12 @@ type RatingHeroProps = {
   timeClass: string
 }
 
-const MINUS_SIGN = "−"
-
 export function RatingHero({ games, filteredGames, year, timeClass }: RatingHeroProps) {
-  // Rating and its line follow the account's own format only: other formats
-  // have separate ratings. The line follows the year filter and nothing else.
+  // Rating and its line follow the account's own format only: variants and
+  // other time classes have separate ratings. The line follows the year
+  // filter and nothing else.
   const formatGames = useMemo(
-    () => games.filter((game) => game.timeClass === timeClass),
+    () => games.filter((game) => game.rules === "chess" && game.timeClass === timeClass),
     [games, timeClass],
   )
   const series = useMemo(
@@ -72,8 +71,12 @@ export function RatingHero({ games, filteredGames, year, timeClass }: RatingHero
 
       <div className="flex items-end justify-between gap-4">
         <div className="flex flex-col">
+          {/* aria-label is ignored on a plain span, so the score is read from sr-only text. */}
+          <span className="sr-only">
+            {summary.wins} vitórias, {summary.draws} empates, {summary.losses} derrotas
+          </span>
           <span
-            aria-label={`${summary.wins} vitórias, ${summary.draws} empates, ${summary.losses} derrotas`}
+            aria-hidden
             className="font-display text-xl font-bold whitespace-nowrap tabular-nums"
           >
             <span className="text-win">+{summary.wins}</span>{" "}

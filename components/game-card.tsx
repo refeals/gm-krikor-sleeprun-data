@@ -15,7 +15,9 @@ type GameCardProps = {
 
 function buildMeta(game: GameView, accountTimeClass: string): string {
   const parts: string[] = []
-  if (game.timeClass !== accountTimeClass) parts.push(formatGameFormat(game))
+  if (game.timeClass !== accountTimeClass || game.rules !== "chess") {
+    parts.push(formatGameFormat(game))
+  }
   if (game.accuracy) parts.push(`precisão ${formatAccuracy(game.accuracy.own)}`)
   parts.push(formatGameDate(game.endedAt))
   const meta = parts.join(", ")
@@ -26,6 +28,9 @@ export function GameCard({ game, href, accountTimeClass, onNavigate }: GameCardP
   return (
     <Link
       href={href}
+      // Game pages are generated on first visit. Prefetching every card in
+      // view would make the server build dozens of them per list visit.
+      prefetch={false}
       onClick={onNavigate}
       className="flex items-center gap-3 rounded-card border border-border bg-surface p-3 transition-colors duration-150 hover:border-border-strong active:bg-surface-pressed"
     >

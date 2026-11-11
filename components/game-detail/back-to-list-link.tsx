@@ -5,7 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import type { MouseEvent } from "react"
 
-import { consumeListReturn } from "@/lib/list-return"
+import { cameFromList } from "@/lib/list-return"
 
 type BackToListLinkProps = {
   accountId: string
@@ -23,7 +23,7 @@ export function BackToListLink({ accountId, uuid }: BackToListLinkProps) {
     const opensElsewhere =
       event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey
     if (opensElsewhere) return
-    if (consumeListReturn(uuid) && window.history.length > 1) {
+    if (cameFromList(uuid) && window.history.length > 1) {
       event.preventDefault()
       router.back()
     }

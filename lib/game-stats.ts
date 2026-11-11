@@ -1,3 +1,4 @@
+import { getDayKeyInAppTimeZone } from "@/lib/format"
 import type { GameView } from "@/lib/game-view"
 
 export type GameSummary = {
@@ -44,18 +45,17 @@ export type RatingPoint = {
 }
 
 /**
- * One point per day (the day's last game), oldest first. Expects games in
- * chronological order and from a single time class.
+ * One point per day (the day's last game, in the app time zone), oldest
+ * first. Expects games in chronological order and from a single rating pool.
  */
 export function buildRatingSeries(games: readonly GameView[]): RatingPoint[] {
   const points: RatingPoint[] = []
   let runIndex = 0
-  let previousDayKey: number | null = null
-  const DAY_MS = 86_400_000
+  let previousDayKey: string | null = null
 
   for (const game of games) {
     if (game.isRunStart) runIndex++
-    const dayKey = Math.floor(game.endedAt / DAY_MS)
+    const dayKey = getDayKeyInAppTimeZone(game.endedAt)
     const point = { endedAt: game.endedAt, rating: game.rating, runIndex }
     // Same day and same run: keep only the latest game of the day.
     const last = points.at(-1)

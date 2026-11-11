@@ -1,14 +1,10 @@
-import { notFound } from "next/navigation"
-
 import { AccountSwitcher } from "@/components/account-switcher"
-import { getAccount, isAccountId } from "@/lib/accounts"
+import { requireAccount } from "@/lib/route-params"
 
 // The header lives in a layout so it stays up in loading.tsx and error.tsx.
 // The game page sits outside this group because it has its own header.
 export default async function BrowseLayout({ children, params }: LayoutProps<"/[account]">) {
-  const { account: accountId } = await params
-  if (!isAccountId(accountId)) notFound()
-  const account = getAccount(accountId)
+  const account = await requireAccount(params)
 
   return (
     <>

@@ -67,8 +67,20 @@ export function describeGame(game: GameView): string {
     .join(" ")
 }
 
-/** "Rápida 10+0". */
-export function formatGameFormat(game: Pick<GameView, "timeClass" | "timeControl">): string {
+const RULES_LABEL: Record<string, string> = {
+  chess960: "Chess960",
+  crazyhouse: "Crazyhouse",
+  bughouse: "Bughouse",
+  kingofthehill: "King of the Hill",
+  threecheck: "3 Check",
+}
+
+/** "Rápida 10+0", or "Chess960 Blitz 3+0" for a variant. */
+export function formatGameFormat(
+  game: Pick<GameView, "rules" | "timeClass" | "timeControl">,
+): string {
   const label = TIME_CLASS_LABEL[game.timeClass] ?? game.timeClass
-  return `${label} ${formatTimeControl(game.timeControl)}`
+  const format = `${label} ${formatTimeControl(game.timeControl)}`
+  if (game.rules === "chess") return format
+  return `${RULES_LABEL[game.rules] ?? game.rules} ${format}`
 }

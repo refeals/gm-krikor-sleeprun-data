@@ -120,11 +120,5 @@ export function countSheetFilters(query: GameQuery): number {
   return Number(query.color !== "all") + Number(query.year !== null)
 }
 
-export function hasActiveFilters(query: GameQuery): boolean {
-  return (
-    query.q.trim() !== "" ||
-    query.result !== "all" ||
-    query.color !== "all" ||
-    query.year !== null
-  )
-}
+/** Clears what narrows the list. Sort order and page size are not filters. */
+export const CLEARED_FILTERS: GameFilters = { q: "", result: "all", color: "all", year: null }

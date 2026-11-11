@@ -23,8 +23,16 @@ const yearFormatter = new Intl.DateTimeFormat("en-US", {
   timeZone: APP_TIME_ZONE,
   year: "numeric",
 })
+// en-CA formats dates as YYYY-MM-DD, which works as a day key.
+const dayKeyFormatter = new Intl.DateTimeFormat("en-CA", {
+  timeZone: APP_TIME_ZONE,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+})
 
-const MINUS_SIGN = "−"
+/** U+2212. Typographic minus for negative numbers and the score line. */
+export const MINUS_SIGN = "−"
 
 /** 93.36 → "93,4%". */
 export function formatAccuracy(value: number): string {
@@ -41,6 +49,11 @@ export function formatRatingDelta(delta: number): string {
   if (delta > 0) return `+${delta}`
   if (delta < 0) return `${MINUS_SIGN}${Math.abs(delta)}`
   return "±0"
+}
+
+/** "2026-11-09": the calendar day of a timestamp in the app time zone. */
+export function getDayKeyInAppTimeZone(timestamp: number): string {
+  return dayKeyFormatter.format(timestamp)
 }
 
 /** Calendar year of a timestamp in the app time zone. */

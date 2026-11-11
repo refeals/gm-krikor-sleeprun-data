@@ -127,6 +127,13 @@
     outline-offset: 2px;
   }
 
+  /* Tailwind 4 resets buttons to the default cursor. */
+  button:not(:disabled),
+  [role="button"]:not(:disabled),
+  select {
+    cursor: pointer;
+  }
+
   ::selection {
     background-color: var(--color-accent);
     color: var(--color-on-accent);

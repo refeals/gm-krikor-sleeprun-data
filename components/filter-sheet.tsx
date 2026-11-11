@@ -92,11 +92,13 @@ export function FilterSheet({ id, games, query, years, onApply, onClosed }: Filt
       onAnimationEnd={() => {
         if (isClosing) finishClosing()
       }}
-      className="fixed inset-x-0 top-auto bottom-0 mx-auto my-0 max-h-[85dvh] w-full max-w-[560px] overflow-y-auto rounded-t-sheet border-0 border-t border-border-strong bg-surface p-0 text-text animate-sheet-in backdrop:bg-bg/85 backdrop:animate-fade-in data-[closing=true]:animate-sheet-out data-[closing=true]:backdrop:animate-fade-out"
+      // The dialog itself never scrolls: a click on its own scrollbar would
+      // look like a backdrop click. The middle section scrolls instead.
+      className="fixed inset-x-0 top-auto bottom-0 mx-auto my-0 flex max-h-[85dvh] w-full max-w-[560px] flex-col overflow-hidden rounded-t-sheet border-0 border-t border-border-strong bg-surface p-0 text-text animate-sheet-in backdrop:bg-bg/85 backdrop:animate-fade-in data-[closing=true]:animate-sheet-out data-[closing=true]:backdrop:animate-fade-out [&:not([open])]:hidden"
     >
-      <div aria-hidden className="mx-auto mt-2.5 h-1.5 w-10 rounded-full bg-border-strong" />
+      <div aria-hidden className="mx-auto mt-2.5 h-1.5 w-10 shrink-0 rounded-full bg-border-strong" />
 
-      <div className="flex items-center justify-between pt-2 pr-2 pb-1 pl-5">
+      <div className="flex shrink-0 items-center justify-between pt-2 pr-2 pb-1 pl-5">
         <h2 id={titleId} className="font-display text-2xl font-bold">
           Filtros
         </h2>
@@ -112,7 +114,7 @@ export function FilterSheet({ id, games, query, years, onApply, onClosed }: Filt
         </button>
       </div>
 
-      <div className="flex flex-col gap-5 px-5 pt-3 pb-4">
+      <div className="flex min-h-0 flex-col gap-5 overflow-y-auto px-5 pt-3 pb-4">
         <fieldset className="flex flex-col">
           <legend className="mb-2.5 text-sm font-semibold text-text-muted">Cor</legend>
           <div className="flex flex-wrap gap-2">
@@ -149,7 +151,7 @@ export function FilterSheet({ id, games, query, years, onApply, onClosed }: Filt
         </fieldset>
       </div>
 
-      <div className="border-t border-border px-5 pt-3 pb-[calc(env(safe-area-inset-bottom)+20px)]">
+      <div className="shrink-0 border-t border-border px-5 pt-3 pb-[calc(env(safe-area-inset-bottom)+20px)]">
         <button
           type="button"
           onClick={handleApply}

@@ -1,4 +1,4 @@
-import type { AccountId } from "@/lib/accounts"
+import { getAccount, type AccountId } from "@/lib/accounts"
 import { getYearInAppTimeZone } from "@/lib/format"
 import type { ChessComGame } from "@/types/chess-com"
 
@@ -11,7 +11,8 @@ export type PieceColor = "white" | "black"
  */
 export type GameView = {
   uuid: string
-  url: string
+  /** Chess.com game page, or null if the API sent anything else. */
+  url: string | null
   /** Epoch milliseconds. */
   endedAt: number
   /** Calendar year in the app time zone, used by the year filter. */
@@ -20,11 +21,13 @@ export type GameView = {
   /** Chess.com result code of the side that lost, or of either side on a draw. */
   termination: string
   color: PieceColor
+  /** "chess", or a variant such as "chess960". Variants have their own ratings. */
+  rules: string
   timeClass: string
   timeControl: string
   /** Account rating after this game. */
   rating: number
-  /** Change since the previous game in the same time class. */
+  /** Change since the previous game in the same rating pool (rules and time class). */
   ratingDelta: number | null
   /** The rating was reset before this game: a new speedrun started. */
   isRunStart: boolean
@@ -48,6 +51,7 @@ const DRAW_RESULT_CODES = new Set([
 // still provisional. Resets are drops of about 2000 points.
 const RUN_RESET_THRESHOLD = 300
 
+const CHESS_COM_URL_PREFIX = "https://www.chess.com/"
 const OPENINGS_URL_PREFIX = "https://www.chess.com/openings/"
 // Opening slugs can end in the moves that reach the line:
 // "Ruy-Lopez-Opening-Berlin-Defense-4.O-O", "Queens-Pawn-Opening-1...d5",
@@ -60,9 +64,23 @@ export function toGameResult(resultCode: string): GameResult {
   return "loss"
 }
 
+/** API strings end up in href attributes: only Chess.com pages pass. */
+export function toSafeGameUrl(url: string): string | null {
+  return url.startsWith(CHESS_COM_URL_PREFIX) ? url : null
+}
+
+function decodeSlug(slug: string): string {
+  try {
+    return decodeURIComponent(slug)
+  } catch {
+    // A stray "%" in the slug: keep it as it came.
+    return slug
+  }
+}
+
 export function parseOpeningName(ecoUrl: string | undefined): string | null {
   if (!ecoUrl?.startsWith(OPENINGS_URL_PREFIX)) return null
-  const slug = decodeURIComponent(ecoUrl.slice(OPENINGS_URL_PREFIX.length))
+  const slug = decodeSlug(ecoUrl.slice(OPENINGS_URL_PREFIX.length))
   const movesIndex = slug.search(SLUG_MOVES_PATTERN)
   const nameSlug = movesIndex === -1 ? slug : slug.slice(0, movesIndex)
   const name = nameSlug.replace(/-/g, " ").trim()
@@ -106,29 +124,32 @@ export function toGameViews(
   games: readonly ChessComGame[],
   accountId: AccountId,
 ): GameView[] {
+  const username = getAccount(accountId).username.toLowerCase()
   const chronological = [...games].sort((a, b) => a.end_time - b.end_time)
-  // Ratings are tracked per time class: a blitz game between two rapid games
-  // has its own rating pool.
-  const lastRatingByTimeClass = new Map<string, number>()
+  // Each variant and time class has its own rating: a blitz game between two
+  // rapid games must not count as a rating jump.
+  const lastRatingByPool = new Map<string, number>()
 
   return chronological.map((game) => {
-    const isWhite = game.white.username.toLowerCase() === accountId
+    const isWhite = game.white.username.toLowerCase() === username
     const own = isWhite ? game.white : game.black
     const opponent = isWhite ? game.black : game.white
     const color: PieceColor = isWhite ? "white" : "black"
     const result = toGameResult(own.result)
 
-    const previousRating = lastRatingByTimeClass.get(game.time_class)
-    lastRatingByTimeClass.set(game.time_class, own.rating)
+    const pool = `${game.rules}:${game.time_class}`
+    const previousRating = lastRatingByPool.get(pool)
+    lastRatingByPool.set(pool, own.rating)
 
     return {
       uuid: game.uuid,
-      url: game.url,
+      url: toSafeGameUrl(game.url),
       endedAt: game.end_time * 1000,
       year: getYearInAppTimeZone(game.end_time * 1000),
       result,
       termination: result === "win" ? opponent.result : own.result,
       color,
+      rules: game.rules,
       timeClass: game.time_class,
       timeControl: game.time_control,
       rating: own.rating,

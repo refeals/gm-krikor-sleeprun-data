@@ -7,11 +7,12 @@ import { GameActions } from "@/components/game-detail/game-actions"
 import { PlayerRows } from "@/components/game-detail/player-rows"
 import { ShareButton } from "@/components/game-detail/share-button"
 import { ResultPill } from "@/components/game-marks"
-import { isAccountId, type AccountId } from "@/lib/accounts"
+import type { AccountId } from "@/lib/accounts"
 import { fetchAccountGames } from "@/lib/chess-com"
 import { formatFullDate, formatRatingDelta } from "@/lib/format"
 import { describeGame, formatGameFormat, formatMoveCount } from "@/lib/game-text"
 import { toGameViews, type GameResult, type GameView } from "@/lib/game-view"
+import { requireAccount } from "@/lib/route-params"
 import { cn } from "@/lib/utils"
 
 // No game page is built ahead of time. Each one renders on its first visit
@@ -19,6 +20,15 @@ import { cn } from "@/lib/utils"
 export function generateStaticParams(): { account: string; uuid: string }[] {
   return []
 }
+
+// A finished game never changes, but the page reads the current month to find
+// it, and a fetch with a shorter revalidate lowers the whole route to it. Made
+// explicit here: a visited game page regenerates at most every 5 minutes.
+export const revalidate = 300
+
+// Chess.com game ids are UUIDs. Anything else is a 404 before any fetch, so
+// random paths cost nothing.
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 const BANNER_CLASS: Record<GameResult, string> = {
   win: "border-banner-win-border bg-banner-win-bg",
@@ -28,6 +38,7 @@ const BANNER_CLASS: Record<GameResult, string> = {
 
 // Shared by generateMetadata and the page within one request.
 const findGame = cache(async (accountId: AccountId, uuid: string) => {
+  if (!UUID_PATTERN.test(uuid)) return null
   // The rating delta depends on the previous game, so the whole history is
   // derived. Every month comes from the fetch cache.
   const rawGames = await fetchAccountGames(accountId)
@@ -45,25 +56,24 @@ function describeRating(game: GameView): string {
 export async function generateMetadata({
   params,
 }: PageProps<"/[account]/jogo/[uuid]">): Promise<Metadata> {
-  const { account, uuid } = await params
-  if (!isAccountId(account)) return {}
-  const found = await findGame(account, uuid)
+  const [account, { uuid }] = await Promise.all([requireAccount(params), params])
+  const found = await findGame(account.id, uuid)
   return found ? { title: `${describeGame(found.game)} | SleepRun` } : {}
 }
 
 export default async function GamePage({ params }: PageProps<"/[account]/jogo/[uuid]">) {
-  const { account, uuid } = await params
-  if (!isAccountId(account)) notFound()
-
-  const found = await findGame(account, uuid)
+  const [account, { uuid }] = await Promise.all([requireAccount(params), params])
+  const found = await findGame(account.id, uuid)
   if (!found) notFound()
   const { game, pgn } = found
   const headline = describeGame(game)
 
   return (
-    <main className="flex flex-col gap-6 pb-44 md:max-w-[720px] md:pb-0">
+    // At least a screen tall on mobile, so the sticky actions start at the
+    // bottom edge and the footer sits just below the fold.
+    <main className="flex min-h-dvh flex-col gap-6 md:min-h-0 md:max-w-[720px]">
       <header className="-mx-1 flex items-center justify-between pt-3">
-        <BackToListLink accountId={account} uuid={uuid} />
+        <BackToListLink accountId={account.id} uuid={uuid} />
         <ShareButton title={headline} />
       </header>
 

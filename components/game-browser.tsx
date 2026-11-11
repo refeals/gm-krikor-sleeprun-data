@@ -1,7 +1,7 @@
 "use client"
 
 import { SlidersHorizontal } from "lucide-react"
-import { useCallback, useId, useMemo, useState } from "react"
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
 
 import { FilterSheet, type SheetFilters } from "@/components/filter-sheet"
 import { GameCard } from "@/components/game-card"
@@ -36,6 +36,11 @@ export function GameBrowser({ accountId, games }: GameBrowserProps) {
   const account = getAccount(accountId)
   const sheetId = useId()
   const [isSheetOpen, setIsSheetOpen] = useState(false)
+  // Remounts the search field on "Limpar filtros", dropping any text typed
+  // in the last 300 ms that would otherwise be committed after the clear.
+  const [searchFieldKey, setSearchFieldKey] = useState(0)
+  const listRef = useRef<HTMLUListElement>(null)
+  const pendingFocusIndexRef = useRef<number | null>(null)
   const { query, updateQuery, clearFilters } = useGameQuery()
 
   const years = useMemo(() => getAvailableYears(games), [games])
@@ -50,6 +55,25 @@ export function GameBrowser({ accountId, games }: GameBrowserProps) {
     (filters: SheetFilters) => updateQuery(filters),
     [updateQuery],
   )
+
+  function handleClearFilters() {
+    clearFilters()
+    setSearchFieldKey((key) => key + 1)
+  }
+
+  // "Carregar mais" can disappear with the last batch. Focus moves to the
+  // first new card so keyboard and screen reader users land on what loaded.
+  function handleLoadMore() {
+    pendingFocusIndexRef.current = visibleGames.length
+    updateQuery({ page: query.page + 1 })
+  }
+
+  useEffect(() => {
+    const index = pendingFocusIndexRef.current
+    if (index === null) return
+    pendingFocusIndexRef.current = null
+    listRef.current?.querySelectorAll<HTMLAnchorElement>("a")[index]?.focus()
+  }, [visibleGames.length])
 
   if (games.length === 0) {
     return (
@@ -70,7 +94,7 @@ export function GameBrowser({ accountId, games }: GameBrowserProps) {
 
       <div className="flex flex-col gap-2 pt-4">
         <div className="flex gap-2">
-          <SearchField value={query.q} onCommit={commitSearch} />
+          <SearchField key={searchFieldKey} value={query.q} onCommit={commitSearch} />
           <button
             type="button"
             onClick={() => setIsSheetOpen(true)}
@@ -111,19 +135,19 @@ export function GameBrowser({ accountId, games }: GameBrowserProps) {
           <p className="text-base text-text-secondary">Nenhum jogo com esses filtros.</p>
           <button
             type="button"
-            onClick={clearFilters}
+            onClick={handleClearFilters}
             className="min-h-12 rounded-card border border-border bg-surface px-5 text-base font-semibold transition-colors duration-150 hover:border-border-strong"
           >
             Limpar filtros
           </button>
         </div>
       ) : (
-        <ul className="flex flex-col gap-2 pt-1 pb-4">
+        <ul ref={listRef} className="flex flex-col gap-2 pt-1 pb-4">
           {visibleGames.map((game) => (
             <li key={game.uuid}>
               <GameCard
                 game={game}
-                href={`/${accountId}/jogo/${game.uuid}`}
+                href={`/${accountId}/jogo/${encodeURIComponent(game.uuid)}`}
                 accountTimeClass={account.timeClass}
                 onNavigate={() => rememberListReturn(game.uuid)}
               />
@@ -135,7 +159,7 @@ export function GameBrowser({ accountId, games }: GameBrowserProps) {
       {remainingCount > 0 ? (
         <button
           type="button"
-          onClick={() => updateQuery({ page: query.page + 1 })}
+          onClick={handleLoadMore}
           className="mb-4 min-h-12 w-full rounded-card border border-border bg-surface text-base font-semibold transition-colors duration-150 hover:border-border-strong"
         >
           Carregar mais {Math.min(LOAD_MORE_BATCH, remainingCount)}

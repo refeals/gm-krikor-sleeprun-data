@@ -257,7 +257,7 @@ Mostrando 1–25 de 1.234          Linhas por página [25]       ‹ 1 2 3 … 5
 
 ### Vazio
 
-- **Filtros sem resultado:** "Nenhum jogo com esses filtros." e um botão secundário "Limpar filtros", que limpa a query string inteira.
+- **Filtros sem resultado:** "Nenhum jogo com esses filtros." e um botão secundário "Limpar filtros", que limpa busca, resultado, cor e ano. Ordenação e tamanho de página ficam, porque não são filtros.
 - **Conta sem partidas** (a API respondeu com lista vazia): "Essa conta ainda não tem partidas no Chess.com."
 
 ### Rodapé (todas as telas)
@@ -385,11 +385,11 @@ Medido com os dados reais em nov/2026: cada conta tem entre 1,5 mil e 1,8 mil jo
    - mês corrente: `next: { revalidate: 300 }`
    - meses passados: `next: { revalidate: 86400 }`
 
-   Meses passados revalidam uma vez por dia em vez de usar `force-cache`. O mês que acabou de fechar pode ter sido guardado nos seus últimos minutos, enquanto ainda era o corrente, e com `force-cache` ficaria sem os jogos finais para sempre.
+   Meses passados revalidam uma vez por dia em vez de usar `force-cache`. O Next julga a validade de uma entrada pelo `revalidate` da chamada que lê, não da que gravou. Por isso, no dia 1 do mês, o mês anterior continua com 300 s: ele pode ter sido gravado horas antes de fechar e ficaria até um dia sem os jogos finais.
 
    A escolha pelo cache do `fetch` vem da doc de `use cache` ("Runtime caching considerations"). Em serverless, o handler padrão do `use cache` fica em memória e normalmente não guarda entradas entre requests. O cache do `fetch` persiste entre requests e entre deploys.
 
-   O Chess.com limita requisições em paralelo, então as buscas rodam no máximo 6 por vez, com até 3 tentativas em resposta 429 ou 5xx.
+   O Chess.com limita requisições em paralelo, então as buscas rodam no máximo 6 por vez, com até 3 tentativas em resposta 429, 5xx, erro de rede ou timeout (15 s). Cada tentativa leva um `signal` próprio. Sem ele, a deduplicação de `fetch` do Next devolveria a mesma resposta de erro nas tentativas seguintes. Depois de uma falha, nenhuma busca nova começa.
 4. **Lista estática com ISR**, em `app/[account]/(browse)/page.tsx`:
    - `generateStaticParams` devolve as duas contas, e `dynamicParams = false` faz qualquer outra dar 404. Essa config fica no `page.tsx` da lista. Num layout ela valeria para os filhos e derrubaria as páginas de detalhe.
    - `export const revalidate = 300`.
@@ -401,7 +401,9 @@ Medido com os dados reais em nov/2026: cada conta tem entre 1,5 mil e 1,8 mil jo
    - usa o `endedAt` para saber o mês
    - busca o mês (também em cache) para ter o PGN
 
-   Jogo terminado não muda: `generateStaticParams` devolve `[]` e `revalidate = false`, então cada página é gerada na primeira visita e guardada.
+   `generateStaticParams` devolve `[]`, então cada página é gerada na primeira visita e guardada. Jogo terminado não muda, mas `revalidate = false` não adiantaria: a página lê o mês corrente (300 s), e um `fetch` com revalidate menor rebaixa a rota inteira. Fica `revalidate = 300` explícito. Um `uuid` fora do formato UUID dá 404 antes de qualquer busca.
+
+   Os cards da lista usam `prefetch={false}`. A rota de detalhe é estática, e o prefetch padrão faria o servidor gerar uma página de detalhe por card visível.
 7. **PGN sob demanda para a tabela desktop.**
    - **Route Handler:** `GET /api/games/[account]/[uuid]/pgn`, respondendo `text/plain`.
    - **Cópia:** o botão "PGN" chama `navigator.clipboard.write([new ClipboardItem({ "text/plain": fetchPromise })])`. Passar a Promise para o `ClipboardItem` mantém o gesto do usuário válido no Safari durante o fetch.

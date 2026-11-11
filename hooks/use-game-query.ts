@@ -1,9 +1,14 @@
 "use client"
 
-import { usePathname, useSearchParams } from "next/navigation"
+import { useSearchParams } from "next/navigation"
 import { useCallback, useMemo } from "react"
 
-import { parseGameQuery, serializeGameQuery, type GameQuery } from "@/lib/game-query"
+import {
+  CLEARED_FILTERS,
+  parseGameQuery,
+  serializeGameQuery,
+  type GameQuery,
+} from "@/lib/game-query"
 
 /**
  * Reads and writes the list state in the URL. The URL is the only source of
@@ -15,22 +20,18 @@ import { parseGameQuery, serializeGameQuery, type GameQuery } from "@/lib/game-q
  */
 export function useGameQuery() {
   const searchParams = useSearchParams()
-  const pathname = usePathname()
-
   const query = useMemo(() => parseGameQuery(searchParams), [searchParams])
 
-  // Any change sends the reader back to the first page unless the patch sets one.
-  const updateQuery = useCallback(
-    (patch: Partial<GameQuery>) => {
-      const next: GameQuery = { ...query, page: 1, ...patch }
-      window.history.replaceState(null, "", `${pathname}${serializeGameQuery(next)}`)
-    },
-    [pathname, query],
-  )
+  // Patches the URL as it is now, not as of the last render: two writes in
+  // the same tick (a debounced search and a chip click) both survive. Any
+  // change sends the reader back to the first page unless the patch sets one.
+  const updateQuery = useCallback((patch: Partial<GameQuery>) => {
+    const current = parseGameQuery(new URLSearchParams(window.location.search))
+    const next: GameQuery = { ...current, page: 1, ...patch }
+    window.history.replaceState(null, "", `${window.location.pathname}${serializeGameQuery(next)}`)
+  }, [])
 
-  const clearFilters = useCallback(() => {
-    window.history.replaceState(null, "", pathname)
-  }, [pathname])
+  const clearFilters = useCallback(() => updateQuery(CLEARED_FILTERS), [updateQuery])
 
   return { query, updateQuery, clearFilters }
 }
