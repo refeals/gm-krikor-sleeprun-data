@@ -16,7 +16,7 @@ export default function GameError({ error, retry }: { error: unknown; retry: () 
   }, [error])
 
   return (
-    <main id="main-content" tabIndex={-1} className="flex flex-col focus-visible:outline-none md:max-w-[720px]">
+    <main id="main-content" tabIndex={-1} className="mx-auto flex flex-col focus-visible:outline-none md:max-w-[720px]">
       <div className="-mx-1 pt-3">
         <Link
           href={`/${encodeURIComponent(account)}`}

@@ -438,6 +438,9 @@ Medido com os dados reais em nov/2026: cada conta tem entre 1,5 mil e 1,8 mil jo
    - **No detalhe:** o PGN já está na página, então a cópia usa `writeText` direto.
 8. **Cache Components fica desligado.** O checklist de upgrade do 16 pede para não ligar só por causa do upgrade. Aqui a página é estática com filtro no cliente, e o ganho dele (shell estático com partes por request em streaming) não aparece. Vale reavaliar se surgir conteúdo por request.
 9. **Número de lances pelo PGN**, porque o FEN costuma vir sem contador (seção 2).
+10. **Cache do roteador no cliente.** As páginas de conta são geradas sob demanda, então o Next as trata como dinâmicas no cache do navegador, e o padrão para dinâmicas é não guardar nada. Cada troca de conta baixava a lista inteira de novo (~850 KB descomprimidos, ~105 KB com gzip), mesmo voltando para uma conta vista segundos antes. `experimental.staleTimes.dynamic = 300` no `next.config.ts` guarda as páginas visitadas por 5 min. Medido: voltar para a outra conta passou de 760 KB e 445 ms para nenhuma requisição e 119 ms. Isso cobre o que o React Query fazia (cache em memória por conta durante a sessão), sem um segundo caminho de dados. A flag é marcada como experimental na doc. No pior caso, uma conta vinda do cache tem ~10 min (5 do ISR e 5 no navegador).
+
+O que já não usava rede: filtros, busca, ordenação e paginação (`replaceState` sobre os dados em memória), voltar e avançar no navegador, e o link "Jogos" do detalhe.
 
 ## 9. Ordem sugerida
 

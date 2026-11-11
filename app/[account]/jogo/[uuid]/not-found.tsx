@@ -14,7 +14,7 @@ export default function GameNotFound() {
   const isKnownAccount = isAccountId(accountParam)
 
   return (
-    <main id="main-content" tabIndex={-1} className="focus-visible:outline-none md:max-w-[720px]">
+    <main id="main-content" tabIndex={-1} className="mx-auto focus-visible:outline-none md:max-w-[720px]">
       <StatusScreen
         icon={SearchX}
         title="Partida não encontrada"

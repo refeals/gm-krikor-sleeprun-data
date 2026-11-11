@@ -71,7 +71,7 @@ export default async function GamePage({ params }: PageProps<"/[account]/jogo/[u
     <main
       id="main-content"
       tabIndex={-1}
-      className="flex min-h-dvh flex-col gap-6 focus-visible:outline-none md:min-h-0 md:max-w-[720px]"
+      className="flex min-h-dvh flex-col gap-6 focus-visible:outline-none md:min-h-0 md:max-w-[720px] mx-auto"
     >
       <header className="-mx-1 flex items-center justify-between pt-3">
         <BackToListLink accountId={account.id} uuid={uuid} />

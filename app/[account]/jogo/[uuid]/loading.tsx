@@ -5,7 +5,7 @@ export default function GameLoading() {
       id="main-content"
       tabIndex={-1}
       aria-busy="true"
-      className="flex flex-col gap-6 focus-visible:outline-none md:max-w-[720px]"
+      className="mx-auto flex flex-col gap-6 focus-visible:outline-none md:max-w-[720px]"
     >
       <p role="status" className="sr-only">
         Carregando jogo…
