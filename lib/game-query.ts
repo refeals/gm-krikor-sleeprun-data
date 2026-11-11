@@ -1,4 +1,5 @@
 import type { GameResult, GameView, PieceColor } from "@/lib/game-view"
+import { getPortugueseSearchTerms } from "@/lib/openings"
 
 export type ResultFilter = GameResult | "all"
 export type ColorFilter = PieceColor | "all"
@@ -80,31 +81,45 @@ export function normalizeSearchText(value: string): string {
   return value.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim()
 }
 
-// Normalized "opponent opening" per game, computed once. Keyed by the game
-// object, so it lives exactly as long as the games list does.
+// Normalized "opponent, opening in English, opening in Portuguese" per game,
+// computed once. Keyed by the game object, so it lives exactly as long as the
+// games list does.
 const searchableTextCache = new WeakMap<GameView, string>()
 
 function getSearchableText(game: GameView): string {
   let text = searchableTextCache.get(game)
   if (text === undefined) {
-    text = normalizeSearchText(`${game.opponent.username}\n${game.openingName ?? ""}`)
+    const opening = game.openingName ?? ""
+    text = normalizeSearchText(
+      `${game.opponent.username}\n${opening}\n${opening ? getPortugueseSearchTerms(opening) : ""}`,
+    )
     searchableTextCache.set(game, text)
   }
   return text
 }
 
+// Connectors people type but that don't narrow anything down, so "gambito de
+// dama" still finds "gambito da dama".
+const SEARCH_STOP_WORDS = new Set(["de", "da", "do", "das", "dos", "e", "a", "o"])
+
+/** Words of the search; every one must appear, in any order. */
+function toSearchWords(q: string): string[] {
+  const words = normalizeSearchText(q).split(/\s+/).filter(Boolean)
+  const meaningful = words.filter((word) => !SEARCH_STOP_WORDS.has(word))
+  return meaningful.length > 0 ? meaningful : words
+}
+
 export type GameFilters = Pick<GameQuery, "q" | "result" | "color" | "year">
 
 export function filterGames(games: readonly GameView[], filters: GameFilters): GameView[] {
-  const term = normalizeSearchText(filters.q)
+  const searchWords = toSearchWords(filters.q)
   return games.filter((game) => {
     if (filters.result !== "all" && game.result !== filters.result) return false
     if (filters.color !== "all" && game.color !== filters.color) return false
     if (filters.year !== null && game.year !== filters.year) return false
-    if (!term) return true
-    return (
-      getSearchableText(game).includes(term)
-    )
+    if (searchWords.length === 0) return true
+    const text = getSearchableText(game)
+    return searchWords.every((word) => text.includes(word))
   })
 }
 

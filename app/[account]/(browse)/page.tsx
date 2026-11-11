@@ -5,6 +5,7 @@ import { GameBrowser } from "@/components/game-browser"
 import { GameBrowserSkeleton } from "@/components/game-browser-skeleton"
 import { fetchAccountGames } from "@/lib/chess-com"
 import { toGameViews } from "@/lib/game-view"
+import { reportUnknownOpeningFamilies } from "@/lib/openings"
 import { requireAccount } from "@/lib/route-params"
 
 // Nothing is built ahead of time: each account page renders on its first
@@ -29,6 +30,7 @@ export async function generateMetadata({ params }: PageProps<"/[account]">): Pro
 export default async function AccountGamesPage({ params }: PageProps<"/[account]">) {
   const account = await requireAccount(params)
   const games = toGameViews(await fetchAccountGames(account.id), account.id)
+  reportUnknownOpeningFamilies(games.map((game) => game.openingName))
 
   return (
     // useSearchParams needs a Suspense boundary to keep the page static.

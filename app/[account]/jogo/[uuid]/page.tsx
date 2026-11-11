@@ -11,7 +11,7 @@ import { ResultPill } from "@/components/game-marks"
 import type { AccountId } from "@/lib/accounts"
 import { fetchAccountGames } from "@/lib/chess-com"
 import { formatFullDate, formatRatingDelta } from "@/lib/format"
-import { describeGame, formatGameFormat, formatMoveCount } from "@/lib/game-text"
+import { describeGame, formatGameFormat, formatMoveCount, formatOpeningName } from "@/lib/game-text"
 import { findGameView, isGameUuid, type GameResult, type GameView } from "@/lib/game-view"
 import { requireAccount } from "@/lib/route-params"
 import { cn } from "@/lib/utils"
@@ -95,8 +95,15 @@ export default async function GamePage({ params }: PageProps<"/[account]/jogo/[u
         <div className="flex gap-4 py-3">
           <dt className="w-24 shrink-0 pt-0.5 text-sm text-text-muted">Abertura</dt>
           <dd className="flex min-w-0 flex-col gap-0.5">
-            <span className="text-base font-semibold">{game.openingName ?? "Desconhecida"}</span>
-            {game.ecoCode ? <span className="text-xs text-text-muted">ECO {game.ecoCode}</span> : null}
+            <span className="text-base font-semibold">
+              {formatOpeningName(game.openingName, "Desconhecida")}
+            </span>
+            {/* Chess.com's own name, to match it against the game on their site. */}
+            {game.openingName || game.ecoCode ? (
+              <span lang="en" className="text-xs text-text-muted">
+                {[game.openingName, game.ecoCode && `ECO ${game.ecoCode}`].filter(Boolean).join(", ")}
+              </span>
+            ) : null}
           </dd>
         </div>
         <div className="flex items-center gap-4 py-3">

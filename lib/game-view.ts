@@ -1,5 +1,6 @@
 import { getAccount, type AccountId } from "@/lib/accounts"
 import { getYearInAppTimeZone } from "@/lib/format"
+import { parseOpeningName } from "@/lib/openings"
 import type { ChessComGame } from "@/types/chess-com"
 
 export type GameResult = "win" | "draw" | "loss"
@@ -52,11 +53,6 @@ const DRAW_RESULT_CODES = new Set([
 const RUN_RESET_THRESHOLD = 300
 
 const CHESS_COM_URL_PREFIX = "https://www.chess.com/"
-const OPENINGS_URL_PREFIX = "https://www.chess.com/openings/"
-// Opening slugs can end in the moves that reach the line:
-// "Ruy-Lopez-Opening-Berlin-Defense-4.O-O", "Queens-Pawn-Opening-1...d5",
-// "Sicilian-Defense-Smith-Morra-Gambit...3.Qxd4-Nc6".
-const SLUG_MOVES_PATTERN = /(?:-|\.\.\.)\d+\./
 
 export function toGameResult(resultCode: string): GameResult {
   if (resultCode === "win") return "win"
@@ -80,26 +76,6 @@ export function toArchiveMonth(timestamp: number): string {
 /** API strings end up in href attributes: only Chess.com pages pass. */
 export function toSafeGameUrl(url: string): string | null {
   return url.startsWith(CHESS_COM_URL_PREFIX) ? url : null
-}
-
-function decodeSlug(slug: string): string {
-  try {
-    return decodeURIComponent(slug)
-  } catch {
-    // A stray "%" in the slug: keep it as it came.
-    return slug
-  }
-}
-
-export function parseOpeningName(ecoUrl: string | undefined): string | null {
-  if (!ecoUrl?.startsWith(OPENINGS_URL_PREFIX)) return null
-  const slug = decodeSlug(ecoUrl.slice(OPENINGS_URL_PREFIX.length))
-  const movesIndex = slug.search(SLUG_MOVES_PATTERN)
-  const nameSlug = movesIndex === -1 ? slug : slug.slice(0, movesIndex)
-  const name = nameSlug.replace(/-/g, " ").trim()
-  // Chess.com sends the literal slug "Undefined" when it found no opening.
-  if (!name || name === "Undefined") return null
-  return name
 }
 
 export function parseEcoCode(pgn: string): string | null {

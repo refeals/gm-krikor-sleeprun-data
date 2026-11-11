@@ -10,7 +10,7 @@ import { useTransientValue } from "@/hooks/use-transient-flag"
 import { copyTextFrom } from "@/lib/clipboard"
 import { formatAccuracy, formatGameDate } from "@/lib/format"
 import { isModifiedClick } from "@/lib/events"
-import { COLOR_NAME } from "@/lib/game-text"
+import { COLOR_NAME, formatOpeningName } from "@/lib/game-text"
 import { toArchiveMonth, type GameView } from "@/lib/game-view"
 import { cn } from "@/lib/utils"
 
@@ -152,9 +152,9 @@ export function GameTable({ accountId, games, caption, gameHref, onOpenGame }: G
               </td>
               <td
                 className={cn(cellClassName, "max-w-[240px] truncate text-text-secondary")}
-                title={game.openingName ?? undefined}
+                title={game.openingName ? formatOpeningName(game.openingName) : undefined}
               >
-                {game.openingName ?? "Desconhecida"}
+                {formatOpeningName(game.openingName, "Desconhecida")}
               </td>
               <td className={cn(cellClassName, "text-right tabular-nums")}>
                 <span className="inline-flex items-baseline gap-2">

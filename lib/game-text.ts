@@ -1,6 +1,7 @@
 import { formatTimeControl } from "@/lib/format"
 import type { ColorFilter, ResultFilter, SortOrder } from "@/lib/game-query"
 import type { GameResult, GameView, PieceColor } from "@/lib/game-view"
+import { translateOpeningName } from "@/lib/openings"
 
 export const RESULT_FILTER_OPTIONS: readonly { value: ResultFilter; label: string }[] = [
   { value: "all", label: "Todos" },
@@ -78,6 +79,11 @@ const TIME_CLASS_LABEL: Record<string, string> = {
   blitz: "Blitz",
   bullet: "Bullet",
   daily: "Diária",
+}
+
+/** Opening name in Portuguese. Chess.com's English name is kept in the data. */
+export function formatOpeningName(openingName: string | null, fallback = "Abertura desconhecida"): string {
+  return openingName ? translateOpeningName(openingName) : fallback
 }
 
 export function formatMoveCount(moveCount: number): string {

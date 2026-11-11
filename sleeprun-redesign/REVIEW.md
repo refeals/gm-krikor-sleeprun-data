@@ -10,7 +10,7 @@ As seções 3 e 8 foram revistas depois da atualização para o Next 16.4.6, com
 
 1. O seletor de conta (SleepRun / SpeedBemRuim) vai para o header, no lugar do eyebrow "SLEEPRUN" e do botão de menu. O menu sai.
 2. O rating do Krikor aparece no card, no detalhe e num destaque no topo da lista (rating atual, gráfico da subida, placar).
-3. Nomes de abertura ficam em inglês, como vêm do Chess.com.
+3. Nomes de abertura aparecem em português, traduzidos por dicionário próprio (`lib/openings.ts`), porque o Chess.com só manda em inglês. O nome original continua nos dados, aparece no detalhe e também é pesquisável. (Decisão revista: no início ficavam em inglês.)
 4. Os ajustes visuais da seção 6 entram: neutros puxados para o verde de tabuleiro, rótulos sem caixa alta, caixa só em elemento clicável.
 5. O detalhe ganha rota própria, os filtros vão para a URL, e a lista mobile usa "Carregar mais".
 
@@ -131,6 +131,14 @@ rating atual
 ### Barra de busca e filtros (mobile)
 
 - Busca por oponente ou abertura, com `<label>` real (pode ser `sr-only`). Fonte de 16px no input, para o iOS não dar zoom.
+- **Aberturas em português:** o Chess.com só manda o nome em inglês, então `lib/openings.ts` traduz.
+  - **Família:** um nome por família (68 nos dados, mais aberturas que aparecem dentro de variantes), com gênero: "Defesa Siciliana", "Gambito da Dama", "Ruy López", "Partida Italiana".
+  - **Variante:** remontada em português com a palavra principal na frente e os adjetivos concordando. "Najdorf Variation" vira "Variante Najdorf"; "Exchange Variation", "Variante das Trocas"; "Kings Gambit Accepted", "Gambito do Rei Aceito"; "Accelerated London System", "Sistema Londres Acelerado". Prefixos viram hífen ("Variante Anti-Marshall"). Nomes próprios ficam como vêm.
+  - **Formato:** partes separadas por vírgula: "Defesa Siciliana, Aberta, Variante Najdorf".
+  - **Qualidade:** revisado nos 650 nomes reais. Os poucos casos com ordem menos natural são raros ("Variante Moderna Dragão Acelerado", 1 jogo).
+  - **Busca:** inclui o nome traduzido, o original em inglês e apelidos ("abertura espanhola", "giuoco piano", "defesa russa").
+- **Palavras em qualquer ordem:** cada palavra digitada precisa aparecer no oponente, no nome em inglês ou nos termos em português. Assim funcionam "najdorf siciliana" e "22fcar escandinava" (oponente + abertura). Preposições soltas são ignoradas, então "gambito de dama" acha "gambito da dama".
+- **Abertura nova:** se a família não estiver no dicionário, o nome aparece e é buscado em inglês, sem quebrar nada. Se a família existir e só a variante for nova, a família e as palavras conhecidas saem em português, e o resto como veio. A página da lista registra no log do servidor, uma vez por família, as que não estão no dicionário, e `pnpm check:openings` lista as que faltam com base em todos os jogos atuais da API. Hoje a cobertura é de 100% das 3.327 partidas com abertura.
 - Botão de filtros é `<button aria-haspopup="dialog" aria-expanded>`. Com filtros ativos no sheet, mostra a contagem num badge e o `aria-label` vira "Filtros, 2 ativos".
 - Chips Todos / Vitórias / Empates / Derrotas com `aria-pressed`, aplicados na hora.
 - Linha de contagem: "24 jogos" (ou "1 jogo") à esquerda. À direita, `<select>` de ordenação com rótulo `sr-only` "Ordenar": Mais recentes, Mais antigos, Maior precisão.
@@ -148,7 +156,7 @@ rating atual
 - O card inteiro é um `<a>` para o detalhe.
 - **Badge:** 44×44, raio 12, letra V/E/D sobre a cor do resultado. O nome do resultado vai em texto `sr-only` ("Vitória"). `aria-label` num `<span>` não é lido por leitor de tela.
 - **Linha 1** (15px, 600): quadrado da peça (10px, `aria-hidden`), "vs {oponente}" com reticências, rating do oponente em 12px muted.
-- **Linha 2** (13px, secundário): abertura com reticências.
+- **Linha 2** (13px, secundário): abertura em português, com reticências.
 - **Linha 3** (12px, muted): "Precisão 93,4%, 9 nov". Sem análise, só a data. Jogo em outro ritmo que o da conta (a SleepReRun tem 4 de blitz) começa a linha pelo formato: "Blitz 3+0, precisão 88,1%, 2 mar 2022".
 - **Coluna direita:** rating do Krikor (Space Grotesk 17px), e abaixo o delta em 12px 600. "+8" na cor de vitória, "−7" na de derrota, "±0" muted. Em início de run: "nova run", muted.
 - Saem do card: "Brancas" (o quadrado da peça já diz), "Blitz" (está no header) e o número de lances (está no detalhe e na tabela).
@@ -209,7 +217,7 @@ Lances     42
 - **Linha de rating** no banner: "Rating 1531 (+8)". Em início de run: "Rating 543, início de run".
 - **Precisão:** h2 em sentence case. Duas barras, a do Krikor na cor de destaque. Sem análise, o h2 vira "Jogadores", as linhas dos dois jogadores ficam sem barra e sem porcentagem, e abaixo entra o texto "O Chess.com não tem análise de precisão para este jogo." Assim o nome do oponente aparece nos dois casos.
 - **"Jogos" (voltar):** se o leitor veio da lista, volta no histórico, o que restaura filtros e scroll. A lista grava o `uuid` aberto em memória, não em `sessionStorage`: a marca sobrevive a navegação no cliente, inclusive voltar e avançar, e zera em qualquer carregamento completo. Assim, uma partida aberta por URL digitada nunca volta pelo histórico, o que poderia levar a outro site. Aberto por link compartilhado, o mesmo link leva para `/[account]`.
-- **Abertura e lances:** um `<dl>` sem caixas, separado por linhas finas. Sai o bloco Ritmo, que já está no banner.
+- **Abertura e lances:** um `<dl>` sem caixas, separado por linhas finas. Sai o bloco Ritmo, que já está no banner. A abertura aparece em português e, embaixo, menor, o nome do Chess.com e o ECO ("Sicilian Defense Open Najdorf Variation, ECO B90", com `lang="en"`), para conferir com o site deles.
 - **Rodapé fixo** com `env(safe-area-inset-bottom)`.
   - "Abrir no Chess.com" abre em nova aba. Leva um ícone SVG de link externo e o texto `sr-only` "(abre em nova aba)".
   - "Copiar PGN" troca o rótulo para "PGN copiado" por 2 s e anuncia numa região `aria-live="polite"`.
