@@ -1,3 +1,5 @@
+import { cn } from "@/lib/utils"
+
 const block = "rounded-control bg-surface"
 const SKELETON_CARD_COUNT = 6
 const SKELETON_ROW_COUNT = 8
@@ -19,21 +21,21 @@ export function GameBrowserSkeleton({ isAnnounced = true }: { isAnnounced?: bool
       ) : null}
 
       <div aria-hidden className="flex animate-pulse flex-col">
-        <div className={`hidden h-6 w-[560px] max-w-full md:mb-2 md:block ${block}`} />
+        <div className={cn("hidden h-6 w-[560px] max-w-full md:mb-2 md:block", block)} />
 
         <div className="flex flex-col gap-3 pt-4 pb-2 md:grid md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-end md:gap-8 md:pt-6">
-          <div className={`h-11 w-28 md:h-14 ${block}`} />
-          <div className={`h-16 w-full md:h-24 ${block}`} />
+          <div className={cn("h-11 w-28 md:h-14", block)} />
+          <div className={cn("h-16 w-full md:h-24", block)} />
           <div className="flex justify-between gap-4 md:flex-col md:items-end">
-            <div className={`h-10 w-32 ${block}`} />
-            <div className={`h-10 w-36 ${block}`} />
+            <div className={cn("h-10 w-32", block)} />
+            <div className={cn("h-10 w-36", block)} />
           </div>
         </div>
 
         <div className="flex flex-col gap-2 pt-4 md:flex-row md:items-center md:gap-3 md:pt-6">
           <div className="flex gap-2 md:flex-1">
-            <div className={`h-12 flex-1 ${block}`} />
-            <div className={`size-12 md:hidden ${block}`} />
+            <div className={cn("h-12 flex-1", block)} />
+            <div className={cn("size-12 md:hidden", block)} />
           </div>
           <div className="flex gap-2 py-1">
             {CHIP_WIDTHS.map((width, index) => (
@@ -41,8 +43,8 @@ export function GameBrowserSkeleton({ isAnnounced = true }: { isAnnounced?: bool
             ))}
           </div>
           <div className="hidden gap-3 md:flex">
-            <div className={`h-12 w-40 ${block}`} />
-            <div className={`h-12 w-40 ${block}`} />
+            <div className={cn("h-12 w-40", block)} />
+            <div className={cn("h-12 w-40", block)} />
           </div>
         </div>
 

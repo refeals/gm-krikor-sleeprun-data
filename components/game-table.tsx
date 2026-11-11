@@ -12,6 +12,7 @@ import { formatAccuracy, formatGameDate } from "@/lib/format"
 import { isModifiedClick } from "@/lib/events"
 import { COLOR_NAME } from "@/lib/game-text"
 import { toArchiveMonth, type GameView } from "@/lib/game-view"
+import { cn } from "@/lib/utils"
 
 const FEEDBACK_MS = 2000
 
@@ -112,11 +113,11 @@ export function GameTable({ accountId, games, caption, gameHref, onOpenGame }: G
             <th scope="col" className={headerCellClassName}>Resultado</th>
             <th scope="col" className={headerCellClassName}>Oponente</th>
             <th scope="col" className={headerCellClassName}>Abertura</th>
-            <th scope="col" className={`${headerCellClassName} text-right`}>Rating</th>
-            <th scope="col" className={`${headerCellClassName} text-right`}>Precisão</th>
-            <th scope="col" className={`${headerCellClassName} text-right`}>Lances</th>
-            <th scope="col" className={`${headerCellClassName} text-right`}>Data</th>
-            <th scope="col" className={`${headerCellClassName} text-right`}>Ações</th>
+            <th scope="col" className={cn(headerCellClassName, "text-right")}>Rating</th>
+            <th scope="col" className={cn(headerCellClassName, "text-right")}>Precisão</th>
+            <th scope="col" className={cn(headerCellClassName, "text-right")}>Lances</th>
+            <th scope="col" className={cn(headerCellClassName, "text-right")}>Data</th>
+            <th scope="col" className={cn(headerCellClassName, "text-right")}>Ações</th>
           </tr>
         </thead>
         <tbody>
@@ -150,18 +151,18 @@ export function GameTable({ accountId, games, caption, gameHref, onOpenGame }: G
                 </span>
               </td>
               <td
-                className={`${cellClassName} max-w-[240px] truncate text-text-secondary`}
+                className={cn(cellClassName, "max-w-[240px] truncate text-text-secondary")}
                 title={game.openingName ?? undefined}
               >
                 {game.openingName ?? "Desconhecida"}
               </td>
-              <td className={`${cellClassName} text-right tabular-nums`}>
+              <td className={cn(cellClassName, "text-right tabular-nums")}>
                 <span className="inline-flex items-baseline gap-2">
                   <span className="font-display font-bold">{game.rating}</span>
                   <RatingChange game={game} />
                 </span>
               </td>
-              <td className={`${cellClassName} text-right font-display font-bold tabular-nums`}>
+              <td className={cn(cellClassName, "text-right font-display font-bold tabular-nums")}>
                 {game.accuracy ? (
                   formatAccuracy(game.accuracy.own)
                 ) : (
@@ -171,8 +172,8 @@ export function GameTable({ accountId, games, caption, gameHref, onOpenGame }: G
                   </>
                 )}
               </td>
-              <td className={`${cellClassName} text-right tabular-nums`}>{game.moveCount}</td>
-              <td className={`${cellClassName} text-right whitespace-nowrap text-text-secondary tabular-nums`}>
+              <td className={cn(cellClassName, "text-right tabular-nums")}>{game.moveCount}</td>
+              <td className={cn(cellClassName, "text-right whitespace-nowrap text-text-secondary tabular-nums")}>
                 {formatGameDate(game.endedAt)}
               </td>
               <td className={cellClassName}>
@@ -190,7 +191,7 @@ export function GameTable({ accountId, games, caption, gameHref, onOpenGame }: G
                     onClick={() => handleCopy(game)}
                     disabled={copyingUuid === game.uuid}
                     aria-busy={copyingUuid === game.uuid}
-                    className={`${actionClassName} min-w-[88px] justify-center disabled:cursor-wait disabled:opacity-60`}
+                    className={cn(actionClassName, "min-w-[88px] justify-center disabled:cursor-wait disabled:opacity-60")}
                   >
                     {renderCopyLabel(game)}
                   </button>

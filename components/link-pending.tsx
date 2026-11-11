@@ -3,6 +3,8 @@
 import { LoaderCircle } from "lucide-react"
 import { useLinkStatus } from "next/link"
 
+import { cn } from "@/lib/utils"
+
 // Game links don't prefetch, so a tap can wait on the network for a moment.
 // These show that the tap registered. Both must render inside a <Link>.
 
@@ -12,7 +14,7 @@ export function LinkPendingBar() {
   return (
     <span
       aria-hidden
-      className={`pointer-events-none absolute inset-x-3 bottom-0 h-0.5 overflow-hidden rounded-full transition-opacity duration-150 ${pending ? "opacity-100" : "opacity-0"}`}
+      className={cn("pointer-events-none absolute inset-x-3 bottom-0 h-0.5 overflow-hidden rounded-full transition-opacity duration-150", pending ? "opacity-100" : "opacity-0")}
     >
       {/* Animated only while pending: every card has a bar, and an idle
           infinite animation per card adds up after "Carregar mais". */}

@@ -1,3 +1,5 @@
+import { cn } from "@/lib/utils"
+
 const FOOTER_LINKS = [
   { href: "https://gmkrikor.com.br/", label: "Site oficial" },
   { href: "https://www.youtube.com/@GMKrikor", label: "YouTube" },
@@ -17,7 +19,7 @@ export function SiteFooter() {
             href="https://rafaelsiqueira.dev/"
             target="_blank"
             rel="noopener noreferrer"
-            className={`${linkClassName} underline`}
+            className={cn(linkClassName, "underline")}
           >
             Rafael Siqueira
             <span className="sr-only"> (abre em nova aba)</span>
@@ -31,7 +33,7 @@ export function SiteFooter() {
                 href={link.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={`inline-flex min-h-11 items-center px-2 ${linkClassName}`}
+                className={cn("inline-flex min-h-11 items-center px-2", linkClassName)}
               >
                 {link.label}
                 <span className="sr-only"> (abre em nova aba)</span>
