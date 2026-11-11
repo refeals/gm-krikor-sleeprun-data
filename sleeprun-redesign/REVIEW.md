@@ -63,7 +63,7 @@ Regras:
 - **Lado do Krikor:** `white.username` ou `black.username` igual à conta, sem diferenciar maiúsculas.
 - **Resultado:** `win` vira vitória. `agreed`, `repetition`, `stalemate`, `insufficient`, `50move` e `timevsinsufficient` viram empate. O resto (`checkmated`, `resigned`, `timeout`, `abandoned`) vira derrota.
 - **`ratingDelta`:** rating deste jogo menos o rating do jogo anterior da mesma conta e do mesmo ritmo, em ordem cronológica. O ritmo importa porque a SleepReRun tem 4 jogos de blitz no meio de 1561 de rápida, e cada ritmo tem seu próprio rating. Se o sinal contradiz o resultado (vitória com delta negativo, derrota com delta positivo) ou se o valor absoluto passa de 300, o jogo é `isRunStart` e `ratingDelta` fica `null`.
-- **`openingName`:** tirar o prefixo `https://www.chess.com/openings/`, cortar no primeiro trecho que começa com número de lance (`6.Be3`, `1...d5`) e trocar `-` por espaço. Sem `eco`, `null`.
+- **`openingName`:** tirar o prefixo `https://www.chess.com/openings/`, cortar no primeiro trecho que começa com número de lance (`6.Be3`, `1...d5`) e trocar `-` por espaço. Sem `eco`, `null`. O Chess.com às vezes manda o slug literal `Undefined` (3 jogos na SleepReRun, 5 na SpeedBemRuim), que também vira `null` ("Abertura desconhecida").
 - **`moveCount`:** maior número de lance no movetext do PGN.
 - **Formato da conta:** constante na configuração de contas (`ACCOUNTS`), já que cada conta tem um formato só: SleepReRun "Rápida 10+0", SpeedBemRuim "Blitz 3+0". Assim o header não depende dos dados e continua de pé nas telas de carregamento e erro.
 
@@ -78,13 +78,13 @@ Regras:
 ## 3. Rotas e estado
 
 - `/` redireciona para `/sleeprerun`.
-- `/[account]` é a lista. `account` aceita `sleeprerun` e `speedbemruim`. Outro valor dá 404 (`dynamicParams = false`, seção 8).
+- `/[account]` é a lista. `account` aceita `sleeprerun` e `speedbemruim`. Outro valor dá 404 em `requireAccount`, antes de qualquer busca (seção 8).
 - `/[account]/jogo/[uuid]` é o detalhe, renderizado no servidor (seção 8, item 6). Se o `uuid` não existir na conta, `notFound()`.
 - `app/[account]/layout.tsx` valida a conta. O header da lista (seletor de conta, h1, linha de formato) fica no grupo `app/[account]/(browse)/layout.tsx`, junto com a página da lista, o `loading.tsx` e o `error.tsx`, que assim mantêm o header de pé. O detalhe fica fora do grupo porque tem cabeçalho próprio.
 - No Next 16, `params` é uma Promise: `const { account } = await params`.
 - Filtros na query string, com as mesmas chaves do código: `q`, `result` (`win|draw|loss`), `color` (`white|black`), `year`, `sort` (`newest|oldest|accuracy`), `page`, `size`. Valor padrão não aparece na URL.
 - A URL é a fonte da verdade. O store de filtros do zustand sai. A busca atualiza a URL depois de 300 ms sem digitar. Toda escrita na URL usa `window.history.replaceState`, que o Next sincroniza com `useSearchParams` sem ir ao servidor. `router.replace` buscaria de novo o payload da página, com todos os jogos, a cada filtro.
-- `page` serve aos dois layouts. No mobile, "Carregar mais" incrementa `page` e a lista mostra os itens de `0` até `page × 25`. No desktop, `page` e `size` fatiam a tabela.
+- `page` e `size` significam o mesmo nos dois layouts: a tabela mostra a página N; a lista mobile mostra tudo até o fim da página N, e "Carregar mais" avança `page`. Um link compartilhado sempre inclui as linhas para as quais apontava. Só o layout ativo é montado (`matchMedia` a partir de 768px), então a lista escondida não cresce com a página do desktop. `page` maior que o total é tratado como a última página.
 - A página rola o documento. Nada de altura fixa com scroll interno, como nos frames de 390×844. Assim o Next restaura o scroll ao voltar do detalhe e a barra do iOS funciona.
 - Trocar de conta é navegar para `/[account]`, com o mesmo `loading.tsx` de skeleton.
 
@@ -98,7 +98,7 @@ Jogos do GM Krikor                 h1, 26px mobile / 36px desktop
 Rápida 10+0 no Chess.com           13px, muted
 ```
 
-O seletor é um par de links para `/sleeprerun` e `/speedbemruim`, com `aria-current="page"` no ativo. A linha de formato substitui o "Blitz" que saiu dos cards.
+O seletor é um par de links para `/sleeprerun` e `/speedbemruim`, com `aria-current="page"` no ativo. A linha de formato substitui o "Blitz" que saiu dos cards e aparece em todas as larguras, inclusive no carregamento e no erro. No DOM, o título vem antes do seletor (ordem de leitura); no mobile o seletor aparece em cima via `flex-col-reverse`, no desktop à direita.
 
 ### Destaque (topo da lista)
 
@@ -118,7 +118,7 @@ rating atual
 - **Placar:** notação de xadrez, `+V =E −D`, Space Grotesk 20px. O número de vitórias usa a cor de vitória, o de derrotas a de derrota, o de empates a de empate. `aria-label="14 vitórias, 0 empates, 10 derrotas"`. Reflete todos os filtros. Rótulo "placar" abaixo, e o placar nunca quebra linha.
 - **Precisão média:** média da precisão do Krikor nos jogos filtrados que têm análise. Abaixo, "precisão média de N jogos analisados". Se nenhum tiver análise: "—" e "nenhum jogo analisado".
 - **Hover no sparkline:** linha vertical que segue o ponteiro e encaixa no dia mais próximo, com rating e data num tooltip. Funciona com toque (arrastar na horizontal) sem travar a rolagem vertical. A lista de jogos é a versão em tabela do gráfico, então o tooltip é atalho, não o único acesso ao valor.
-- **Desktop:** a partir de 1024px, três colunas (`auto 1fr auto`, alinhadas na base, gap 32px), com o sparkline de 96px no meio. Entre 768 e 1023px, rating e placar na primeira linha e sparkline na segunda.
+- **Desktop:** a partir de 768px, três colunas (`auto 1fr auto`, alinhadas na base, gap 32px): rating com o pico embaixo, sparkline de 96px no meio, placar e precisão empilhados à direita. Testado em 768px: o sparkline fica estreito, mas legível, e a quebra em duas linhas não foi necessária.
 
 ### Barra de busca e filtros (mobile)
 
@@ -211,7 +211,7 @@ Lances     42
 
 ```
 Jogos do GM Krikor                          [ SleepRun | SpeedBemRuim ]
-1.234 partidas de rápida 10+0 da conta SleepReRun no Chess.com, desde abril de 2021.
+1.565 partidas na conta SleepReRun do Chess.com, desde abril de 2021.
 
 [ destaque: rating | sparkline | placar e precisão ]
 
@@ -225,6 +225,8 @@ Mostrando 1–25 de 1.234          Linhas por página [25]       ‹ 1 2 3 … 5
 ```
 
 - **Container:** max-width 1200px, padding 32px 24px 48px.
+- **Ordenar:** fica na linha da contagem, como no mobile, e não na barra de filtros.
+- **Largura da tabela:** cabe inteira a partir de 1280px. Abaixo disso rola dentro do próprio container, e a página nunca rola na horizontal. Abertura e oponente truncam com `title`. O container é `relative` para os textos `sr-only` das células não escaparem dele.
 - **Header:** os botões "Site oficial" e "YouTube" do header saem. Esses links ficam no rodapé, e o lugar deles fica com o seletor de conta.
 - **Cabeçalhos da tabela:** sentence case, 13px, 600, muted. Colunas numéricas alinhadas à direita, com `tabular-nums`.
 - **Link para o detalhe:** o nome do oponente. A linha inteira muda de fundo no hover.
@@ -236,7 +238,8 @@ Mostrando 1–25 de 1.234          Linhas por página [25]       ‹ 1 2 3 … 5
 
 ### Carregando
 
-- `app/[account]/loading.tsx`.
+- `app/[account]/(browse)/loading.tsx`. O mesmo skeleton é o fallback do `<Suspense>` da lista, então é também o que vai no HTML antes da hidratação e o que se vê sem JavaScript.
+- O detalhe tem `loading.tsx` próprio, porque a página é gerada na primeira visita e pode demorar.
 - **Texto real, sem skeleton:** o header (seletor e h1). O seletor funciona durante o carregamento.
 - **Skeleton:** blocos do destaque (retângulo de 44px para o rating e de 64px para o sparkline), busca, chips e seis cards.
 - `aria-busy="true"` na região da lista e `<p role="status">Carregando jogos…</p>`.
@@ -244,7 +247,9 @@ Mostrando 1–25 de 1.234          Linhas por página [25]       ‹ 1 2 3 … 5
 
 ### Erro
 
-- **Quando aparece:** a camada de dados lança erro e ele cai em `app/[account]/error.tsx` (Client Component).
+- **Quando aparece:** a camada de dados lança erro e ele cai em `app/[account]/(browse)/error.tsx` (Client Component). O detalhe tem o seu, com h1 próprio.
+- **Limitação aceita:** toda falha mostra esta mensagem, até um bug de código. Em produção o texto do erro não chega ao navegador. Separar os casos exigiria renderizar a falha na própria página, e o ISR guardaria essa tela por 5 min. Lançando o erro, o ISR continua servindo a última versão boa quando a revalidação falha.
+- **Foco:** antes do `retry()`, o foco vai para o `<main>`, já que o botão some se der certo.
 - **"Tentar de novo"** chama `retry()`, que no Next 16 busca de novo e re-renderiza o segmento. `reset()` só re-renderiza sem buscar, então não serve aqui. `retry()` não devolve Promise, então não existe estado "Tentando…" confiável: o botão só chama `retry()`.
 - **Header completo**, vindo do layout, com o seletor, para dar para tentar a outra conta.
 - **Bloco `role="alert"`:**
@@ -259,6 +264,7 @@ Mostrando 1–25 de 1.234          Linhas por página [25]       ‹ 1 2 3 … 5
 
 - **Filtros sem resultado:** "Nenhum jogo com esses filtros." e um botão secundário "Limpar filtros", que limpa busca, resultado, cor e ano. Ordenação e tamanho de página ficam, porque não são filtros.
 - **Conta sem partidas** (a API respondeu com lista vazia): "Essa conta ainda não tem partidas no Chess.com."
+- **Endereço inexistente:** `app/not-found.tsx` em português: "Página não encontrada", "Esse endereço não leva a uma conta nem a uma partida." e o botão "Ver jogos do GM Krikor".
 
 ### Rodapé (todas as telas)
 
@@ -280,6 +286,9 @@ Contraste calculado para todos os pares abaixo. O menor texto é o placeholder, 
 - Resultado nunca só por cor: letra no badge, palavra na pílula, sinal no delta.
 - Movimento só em resposta a ação: sheet, retorno de cópia, toque em chip (120 ms). Sem animação de entrada. `prefers-reduced-motion` respeitado.
 - Ícones SVG com traço (lucide-react já está instalado), `aria-hidden` quando há texto ao lado e `aria-label` no botão quando o ícone está sozinho.
+- Link "Pular para o conteúdo" como primeiro foco da página, levando a `#main-content`.
+- Link dentro de frase ("Rafael Siqueira" no rodapé) fica sublinhado: só a cor não basta (WCAG 1.4.1).
+- Auditoria com axe-core em 390px e 1440px (lista, sheet aberto, detalhe): zero violações.
 
 ## 6. Tokens revisados
 
@@ -343,7 +352,7 @@ Vocabulário único: a ação que se chama "Copiar PGN" confirma com "PGN copiad
 | Título da aba | Jogos do GM Krikor no SleepRun |
 | h1 | Jogos do GM Krikor |
 | Formato | Rápida 10+0 no Chess.com / Blitz 3+0 no Chess.com |
-| Subtítulo desktop | {N} partidas de {formato} da conta {usuário} no Chess.com, desde {mês} de {ano}. |
+| Subtítulo desktop | {N} partidas na conta {usuário} do Chess.com, desde {mês} de {ano}. (O formato fica na linha do header; o total inclui jogos de outros ritmos.) |
 | Destaque | rating atual · pico {N} · precisão média · média de {N} jogos analisados · nenhum jogo analisado |
 | Busca (label) | Buscar por oponente ou abertura |
 | Busca (placeholder) | Oponente ou abertura |
@@ -355,7 +364,8 @@ Vocabulário único: a ação que se chama "Copiar PGN" confirma com "PGN copiad
 | Card | vs {oponente} · Precisão {N}% · nova run |
 | Lista | Carregar mais 25 |
 | Detalhe | Jogos · Compartilhar · Precisão · Abertura · Lances · Abrir no Chess.com · Copiar PGN |
-| Retornos | PGN copiado · Link copiado |
+| Retornos | PGN copiado · Link copiado · na tabela: PGN, Copiado, Erro (leitor de tela: "PGN copiado", "Não foi possível copiar o PGN") |
+| Navegação | Pular para o conteúdo · Página não encontrada · Esse endereço não leva a uma conta nem a uma partida. · Ver jogos do GM Krikor |
 | Sem análise | O Chess.com não tem análise de precisão para este jogo. |
 | Carregando | Carregando jogos… |
 | Erro | O Chess.com não respondeu · A lista de jogos vem da API pública do Chess.com. Tente de novo em alguns minutos. · Tentar de novo · Ver jogos no Chess.com |
@@ -391,7 +401,7 @@ Medido com os dados reais em nov/2026: cada conta tem entre 1,5 mil e 1,8 mil jo
 
    O Chess.com limita requisições em paralelo, então as buscas rodam no máximo 6 por vez, com até 3 tentativas em resposta 429, 5xx, erro de rede ou timeout (15 s). Cada tentativa leva um `signal` próprio. Sem ele, a deduplicação de `fetch` do Next devolveria a mesma resposta de erro nas tentativas seguintes. Depois de uma falha, nenhuma busca nova começa.
 4. **Lista estática com ISR**, em `app/[account]/(browse)/page.tsx`:
-   - `generateStaticParams` devolve as duas contas, e `dynamicParams = false` faz qualquer outra dar 404. Essa config fica no `page.tsx` da lista. Num layout ela valeria para os filhos e derrubaria as páginas de detalhe.
+   - `generateStaticParams` devolve `[]`: nenhuma conta é gerada no build, cada uma é gerada na primeira visita e guardada. Assim o deploy não depende do Chess.com estar no ar; um build que buscasse os jogos falharia junto com a API. Os meses continuam no cache do `fetch`, que sobrevive a deploys: a primeira visita medida levou 1,4 s, e as seguintes 20 ms. Conta desconhecida dá 404 em `requireAccount`, antes de qualquer busca.
    - `export const revalidate = 300`.
    - A página monta o `GameView[]` no servidor e passa para o componente cliente da lista como prop.
    - Os filtros são lidos no cliente com `useSearchParams`, dentro de um `<Suspense>`, para a página continuar estática. Ler `searchParams` na página tornaria a rota dinâmica.
@@ -405,7 +415,8 @@ Medido com os dados reais em nov/2026: cada conta tem entre 1,5 mil e 1,8 mil jo
 
    Os cards da lista usam `prefetch={false}`. A rota de detalhe é estática, e o prefetch padrão faria o servidor gerar uma página de detalhe por card visível.
 7. **PGN sob demanda para a tabela desktop.**
-   - **Route Handler:** `GET /api/games/[account]/[uuid]/pgn`, respondendo `text/plain`.
+   - **Route Handler:** `GET /api/games/[account]/[uuid]/pgn?month=2026-11`, respondendo `text/plain`. Com o mês, lê só aquele arquivo; sem ele, ou se o jogo não estiver lá, o histórico inteiro. Falha do Chess.com vira 502 em texto. Cache: `max-age=86400, s-maxage=2592000` (o CDN da Vercel só guarda com `s-maxage`).
+   - **Rótulos:** "PGN", "Copiado" ou "Erro" visíveis, com complemento `sr-only` ("Copiar PGN da partida contra X"). O nome acessível sempre contém a palavra visível (WCAG 2.5.3). Dois cliques em linhas diferentes que terminam fora de ordem: só a última requisição atualiza o estado.
    - **Cópia:** o botão "PGN" chama `navigator.clipboard.write([new ClipboardItem({ "text/plain": fetchPromise })])`. Passar a Promise para o `ClipboardItem` mantém o gesto do usuário válido no Safari durante o fetch.
    - **Fallback:** sem `ClipboardItem`, busca primeiro e depois usa `writeText`.
    - **No detalhe:** o PGN já está na página, então a cópia usa `writeText` direto.

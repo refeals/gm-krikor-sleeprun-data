@@ -64,6 +64,19 @@ export function toGameResult(resultCode: string): GameResult {
   return "loss"
 }
 
+const GAME_UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/** Chess.com game ids are UUIDs. Routes reject anything else before fetching. */
+export function isGameUuid(value: string): boolean {
+  return GAME_UUID_PATTERN.test(value)
+}
+
+/** "2026-11": the Chess.com monthly archive a game is filed under (UTC). */
+export function toArchiveMonth(timestamp: number): string {
+  const date = new Date(timestamp)
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`
+}
+
 /** API strings end up in href attributes: only Chess.com pages pass. */
 export function toSafeGameUrl(url: string): string | null {
   return url.startsWith(CHESS_COM_URL_PREFIX) ? url : null
@@ -84,7 +97,9 @@ export function parseOpeningName(ecoUrl: string | undefined): string | null {
   const movesIndex = slug.search(SLUG_MOVES_PATTERN)
   const nameSlug = movesIndex === -1 ? slug : slug.slice(0, movesIndex)
   const name = nameSlug.replace(/-/g, " ").trim()
-  return name || null
+  // Chess.com sends the literal slug "Undefined" when it found no opening.
+  if (!name || name === "Undefined") return null
+  return name
 }
 
 export function parseEcoCode(pgn: string): string | null {

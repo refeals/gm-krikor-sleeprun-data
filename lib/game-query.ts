@@ -16,7 +16,6 @@ export type GameQuery = {
 }
 
 export const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const
-export const LOAD_MORE_BATCH = 25
 
 export const DEFAULT_GAME_QUERY: GameQuery = {
   q: "",

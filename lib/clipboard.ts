@@ -20,3 +20,31 @@ export async function copyText(text: string): Promise<boolean> {
     }
   }
 }
+
+/**
+ * Copies text that still has to be fetched. Safari only allows the copy while
+ * the click is being handled, so the pending text goes straight into a
+ * ClipboardItem; the browser waits for it. Elsewhere it fetches, then copies.
+ */
+export async function copyTextFrom(loadText: () => Promise<string>): Promise<boolean> {
+  const pendingText = loadText()
+
+  if (typeof ClipboardItem !== "undefined" && navigator.clipboard?.write) {
+    try {
+      const blob = pendingText.then((text) => new Blob([text], { type: "text/plain" }))
+      // If ClipboardItem or write throws before consuming it, a later rejection
+      // of `blob` would go unhandled. The fallback below reports the failure.
+      blob.catch(() => undefined)
+      await navigator.clipboard.write([new ClipboardItem({ "text/plain": blob })])
+      return true
+    } catch {
+      // Fall through to the plain copy below.
+    }
+  }
+
+  try {
+    return await copyText(await pendingText)
+  } catch {
+    return false
+  }
+}

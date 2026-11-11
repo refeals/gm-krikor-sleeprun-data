@@ -16,6 +16,10 @@ type RatingHeroProps = {
   timeClass: string
 }
 
+/**
+ * Mobile: rating and peak, the line, then score and accuracy, stacked.
+ * From 768px: three columns, with the line taking the free width.
+ */
 export function RatingHero({ games, filteredGames, year, timeClass }: RatingHeroProps) {
   // Rating and its line follow the account's own format only: variants and
   // other time classes have separate ratings. The line follows the year
@@ -40,22 +44,25 @@ export function RatingHero({ games, filteredGames, year, timeClass }: RatingHero
   const peak = ratings.length > 0 ? Math.max(...ratings) : currentRating
   const lowest = ratings.length > 0 ? Math.min(...ratings) : currentRating
   const runCount = new Set(series.map((point) => point.runIndex)).size
-  const sparklineLabel =
-    series.length > 1
-      ? `Rating de ${lowest} a ${peak} entre ${formatFullDate(series[0].endedAt)} e ${formatFullDate(series[series.length - 1].endedAt)}` +
-        (runCount > 1 ? `, em ${runCount} runs` : "")
-      : ""
+  const hasLine = series.length > 1
+  const sparklineLabel = hasLine
+    ? `Rating de ${lowest} a ${peak} entre ${formatFullDate(series[0].endedAt)} e ${formatFullDate(series[series.length - 1].endedAt)}` +
+      (runCount > 1 ? `, em ${runCount} runs` : "")
+    : ""
 
   return (
-    <section aria-label="Resumo" className="flex flex-col gap-3 pt-4 pb-2">
-      <div className="flex items-end justify-between gap-4">
+    <section
+      aria-label="Resumo"
+      className="flex flex-col gap-3 pt-4 pb-2 md:grid md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-end md:gap-8 md:pt-6"
+    >
+      <div className="flex items-end justify-between gap-4 md:flex-col md:items-start md:gap-1">
         <div className="flex flex-col">
           <span className="font-display text-5xl font-bold tabular-nums md:text-6xl">
             {currentRating}
           </span>
           <span className="text-xs text-text-muted">rating atual</span>
         </div>
-        {series.length > 1 ? (
+        {hasLine ? (
           <span className="pb-0.5 text-xs text-text-muted">
             pico{" "}
             <span className="font-display text-base font-bold text-text-secondary tabular-nums">
@@ -65,12 +72,14 @@ export function RatingHero({ games, filteredGames, year, timeClass }: RatingHero
         ) : null}
       </div>
 
-      {series.length > 1 ? (
-        <RatingSparkline points={series} label={sparklineLabel} height={64} />
-      ) : null}
+      {hasLine ? (
+        <RatingSparkline points={series} label={sparklineLabel} className="h-16 md:h-24" />
+      ) : (
+        <div aria-hidden className="hidden md:block" />
+      )}
 
-      <div className="flex items-end justify-between gap-4">
-        <div className="flex flex-col">
+      <div className="flex items-end justify-between gap-4 md:flex-col md:items-end md:gap-3">
+        <div className="flex flex-col md:items-end">
           {/* aria-label is ignored on a plain span, so the score is read from sr-only text. */}
           <span className="sr-only">
             {summary.wins} vitórias, {summary.draws} empates, {summary.losses} derrotas

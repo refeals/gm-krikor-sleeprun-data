@@ -13,11 +13,12 @@ export function SiteFooter() {
       <div className="flex flex-col gap-2 border-t border-border pt-4 text-sm text-text-muted md:flex-row md:items-center md:justify-between">
         <p>
           Criado por{" "}
+          {/* Inside a sentence, color alone doesn't mark a link (WCAG 1.4.1): keep the underline. */}
           <a
             href="https://rafaelsiqueira.dev/"
             target="_blank"
             rel="noopener noreferrer"
-            className={linkClassName}
+            className={`${linkClassName} underline`}
           >
             Rafael Siqueira
             <span className="sr-only"> (abre em nova aba)</span>

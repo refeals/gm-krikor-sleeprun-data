@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, type PointerEvent } from "react"
 
 import { formatFullDate } from "@/lib/format"
 import type { RatingPoint } from "@/lib/game-stats"
+import { cn } from "@/lib/utils"
 
 // Room for the 2px line and the 4px end dot with its 2px ring.
 const PADDING = 6
@@ -12,7 +13,8 @@ const TOOLTIP_HALF_WIDTH = 48
 type RatingSparklineProps = {
   points: readonly RatingPoint[]
   label: string
-  height: number
+  /** Sets the size, height included: the chart measures its container. */
+  className?: string
 }
 
 function nearestIndex(xs: readonly number[], target: number): number {
@@ -31,21 +33,24 @@ function nearestIndex(xs: readonly number[], target: number): number {
  * Rating over time, one segment per run. The list below is its table view, so
  * the hover readout is a convenience, not the only way to reach a value.
  */
-export function RatingSparkline({ points, label, height }: RatingSparklineProps) {
+export function RatingSparkline({ points, label, className }: RatingSparklineProps) {
   const containerRef = useRef<HTMLDivElement>(null)
-  const [width, setWidth] = useState(0)
+  const [size, setSize] = useState({ width: 0, height: 0 })
   const [activeIndex, setActiveIndex] = useState<number | null>(null)
+  const { width, height } = size
 
   useEffect(() => {
     const element = containerRef.current
     if (!element) return
-    const observer = new ResizeObserver(([entry]) => setWidth(entry.contentRect.width))
+    const observer = new ResizeObserver(([entry]) =>
+      setSize({ width: entry.contentRect.width, height: entry.contentRect.height }),
+    )
     observer.observe(element)
     return () => observer.disconnect()
   }, [])
 
   const geometry = useMemo(() => {
-    if (width === 0 || points.length === 0) return null
+    if (width === 0 || height === 0 || points.length === 0) return null
 
     const firstTime = points[0].endedAt
     const lastTime = points[points.length - 1].endedAt
@@ -88,7 +93,7 @@ export function RatingSparkline({ points, label, height }: RatingSparklineProps)
   const activeX = activeIndex === null || !geometry ? 0 : geometry.xs[activeIndex]
 
   return (
-    <div ref={containerRef} className="relative w-full" style={{ height }}>
+    <div ref={containerRef} className={cn("relative w-full", className)}>
       {geometry ? (
         <svg
           width={width}

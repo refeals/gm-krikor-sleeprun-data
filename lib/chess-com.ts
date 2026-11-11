@@ -116,12 +116,21 @@ function getRecentArchiveSuffixes(now: Date): string[] {
   return suffixes
 }
 
+function getArchiveRevalidateSeconds(archiveUrl: string, recentSuffixes: readonly string[]) {
+  return recentSuffixes.some((suffix) => archiveUrl.endsWith(suffix))
+    ? RECENT_REVALIDATE_SECONDS
+    : PAST_MONTH_REVALIDATE_SECONDS
+}
+
+function getArchivesUrl(accountId: AccountId) {
+  return `${API_BASE_URL}/${getAccount(accountId).username.toLowerCase()}/games/archives`
+}
+
 /** Every game the account has played, oldest month first. Throws on failure. */
 export const fetchAccountGames = cache(
   async (accountId: AccountId): Promise<ChessComGame[]> => {
-    const username = getAccount(accountId).username.toLowerCase()
     const { archives } = await fetchJson<ChessComArchives>(
-      `${API_BASE_URL}/${username}/games/archives`,
+      getArchivesUrl(accountId),
       RECENT_REVALIDATE_SECONDS,
     )
 
@@ -130,14 +139,35 @@ export const fetchAccountGames = cache(
       archives,
       MAX_CONCURRENT_REQUESTS,
       (archiveUrl) =>
-        fetchJson<ChessComMonth>(
-          archiveUrl,
-          recentSuffixes.some((suffix) => archiveUrl.endsWith(suffix))
-            ? RECENT_REVALIDATE_SECONDS
-            : PAST_MONTH_REVALIDATE_SECONDS,
-        ),
+        fetchJson<ChessComMonth>(archiveUrl, getArchiveRevalidateSeconds(archiveUrl, recentSuffixes)),
     )
 
     return months.flatMap((month) => month.games)
   },
 )
+
+const ARCHIVE_MONTH_PATTERN = /^(\d{4})-(0[1-9]|1[0-2])$/
+
+/**
+ * One game, raw. With a month hint ("2026-11") it reads only that month's
+ * archive; without one, or if the game isn't there, the whole history.
+ */
+export async function findAccountGame(
+  accountId: AccountId,
+  uuid: string,
+  monthHint: string | null,
+): Promise<ChessComGame | null> {
+  const hint = monthHint?.match(ARCHIVE_MONTH_PATTERN)
+  if (hint) {
+    const archiveUrl = `${getArchivesUrl(accountId).replace(/\/archives$/, "")}/${hint[1]}/${hint[2]}`
+    const month = await fetchJson<ChessComMonth>(
+      archiveUrl,
+      getArchiveRevalidateSeconds(archiveUrl, getRecentArchiveSuffixes(new Date())),
+    )
+    const game = month.games.find((candidate) => candidate.uuid === uuid)
+    if (game) return game
+  }
+
+  const games = await fetchAccountGames(accountId)
+  return games.find((candidate) => candidate.uuid === uuid) ?? null
+}

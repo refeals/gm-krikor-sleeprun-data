@@ -1,5 +1,30 @@
 import { formatTimeControl } from "@/lib/format"
+import type { ColorFilter, ResultFilter, SortOrder } from "@/lib/game-query"
 import type { GameResult, GameView, PieceColor } from "@/lib/game-view"
+
+export const RESULT_FILTER_OPTIONS: readonly { value: ResultFilter; label: string }[] = [
+  { value: "all", label: "Todos" },
+  { value: "win", label: "Vitórias" },
+  { value: "draw", label: "Empates" },
+  { value: "loss", label: "Derrotas" },
+]
+
+/** `label` for chips; `selectLabel` for a select, which shows one option without its group's title. */
+export const COLOR_FILTER_OPTIONS: readonly {
+  value: ColorFilter
+  label: string
+  selectLabel: string
+}[] = [
+  { value: "all", label: "Ambas", selectLabel: "Ambas as cores" },
+  { value: "white", label: "Brancas", selectLabel: "Brancas" },
+  { value: "black", label: "Pretas", selectLabel: "Pretas" },
+]
+
+export const SORT_OPTIONS: readonly { value: SortOrder; label: string }[] = [
+  { value: "newest", label: "Mais recentes" },
+  { value: "oldest", label: "Mais antigos" },
+  { value: "accuracy", label: "Maior precisão" },
+]
 
 export const RESULT_LABEL: Record<GameResult, string> = {
   win: "Vitória",

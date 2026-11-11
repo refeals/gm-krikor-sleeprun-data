@@ -4,14 +4,9 @@ import { useEffect, useId, useMemo, useRef, useState, type MouseEvent } from "re
 
 import { ChoiceChip } from "@/components/choice-chip"
 import { formatCount } from "@/lib/format"
-import { filterGames, type ColorFilter, type GameQuery } from "@/lib/game-query"
+import { filterGames, type GameQuery } from "@/lib/game-query"
+import { COLOR_FILTER_OPTIONS } from "@/lib/game-text"
 import type { GameView } from "@/lib/game-view"
-
-const COLOR_OPTIONS: { value: ColorFilter; label: string }[] = [
-  { value: "all", label: "Ambas" },
-  { value: "white", label: "Brancas" },
-  { value: "black", label: "Pretas" },
-]
 
 // Matches --animate-sheet-out, plus margin. Closing never waits on an
 // animationend that a browser might not fire.
@@ -118,7 +113,7 @@ export function FilterSheet({ id, games, query, years, onApply, onClosed }: Filt
         <fieldset className="flex flex-col">
           <legend className="mb-2.5 text-sm font-semibold text-text-muted">Cor</legend>
           <div className="flex flex-wrap gap-2">
-            {COLOR_OPTIONS.map((option) => (
+            {COLOR_FILTER_OPTIONS.map((option) => (
               <ChoiceChip
                 key={option.value}
                 surface="sheet"

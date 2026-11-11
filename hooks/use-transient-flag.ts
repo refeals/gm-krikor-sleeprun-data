@@ -2,17 +2,22 @@
 
 import { useCallback, useEffect, useState } from "react"
 
-/** A flag that turns itself off after a delay, for "copied" style feedback. */
-export function useTransientFlag(durationMs: number) {
-  const [isOn, setIsOn] = useState(false)
+/** A value that clears itself after a delay, for "copied" style feedback. */
+export function useTransientValue<T>(durationMs: number) {
+  const [value, setValue] = useState<T | null>(null)
 
   useEffect(() => {
-    if (!isOn) return
-    const timer = setTimeout(() => setIsOn(false), durationMs)
+    if (value === null) return
+    const timer = setTimeout(() => setValue(null), durationMs)
     return () => clearTimeout(timer)
-  }, [isOn, durationMs])
+  }, [value, durationMs])
 
-  const turnOn = useCallback(() => setIsOn(true), [])
+  return [value, setValue] as const
+}
 
-  return [isOn, turnOn] as const
+/** A flag that turns itself off after a delay. */
+export function useTransientFlag(durationMs: number) {
+  const [value, setValue] = useTransientValue<true>(durationMs)
+  const turnOn = useCallback(() => setValue(true), [setValue])
+  return [value === true, turnOn] as const
 }

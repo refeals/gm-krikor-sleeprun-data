@@ -27,6 +27,12 @@ export function isAccountId(value: string): value is AccountId {
   return ACCOUNTS.some((account) => account.id === value)
 }
 
+/** The account's game archive on Chess.com. Accepts any route value. */
+export function getChessComArchiveUrl(accountParam: string): string {
+  const username = isAccountId(accountParam) ? getAccount(accountParam).username : accountParam
+  return `https://www.chess.com/games/archive/${encodeURIComponent(username.toLowerCase())}`
+}
+
 export function getAccount(id: AccountId): Account {
   const account = ACCOUNTS.find((candidate) => candidate.id === id)
   if (!account) throw new Error(`Unknown account: ${id}`)
