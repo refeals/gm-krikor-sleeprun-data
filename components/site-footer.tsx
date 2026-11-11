@@ -1,7 +1,6 @@
 const FOOTER_LINKS = [
   { href: "https://gmkrikor.com.br/", label: "Site oficial" },
   { href: "https://www.youtube.com/@GMKrikor", label: "YouTube" },
-  { href: "https://github.com/refeals/gm-krikor-sleeprun-data", label: "GitHub" },
 ]
 
 const linkClassName =

@@ -11,7 +11,7 @@ import type {
 
 const API_BASE_URL = "https://api.chess.com/pub/player"
 const REQUEST_HEADERS = {
-  "User-Agent": "sleeprun (+https://github.com/refeals/gm-krikor-sleeprun-data)",
+  "User-Agent": "sleeprun (+https://sleeprun.vercel.app)",
 }
 
 // The archive list and recent months change during the day. Older months are

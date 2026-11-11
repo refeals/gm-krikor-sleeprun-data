@@ -286,7 +286,8 @@ Mostrando 1–25 de 1.234          Linhas por página [25]       ‹ 1 2 3 … 5
 Links separados por espaço, sem ponto médio, cada um com área de toque de 44px:
 - Site oficial: https://gmkrikor.com.br/
 - YouTube: https://www.youtube.com/@GMKrikor
-- GitHub: https://github.com/refeals/gm-krikor-sleeprun-data
+
+O link do GitHub do HANDOFF foi removido.
 
 ## 5. Acessibilidade e interação
 
