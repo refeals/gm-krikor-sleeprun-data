@@ -1,6 +1,6 @@
 "use client"
 
-import { ExternalLink } from "lucide-react"
+import { ExternalLink, Youtube } from "lucide-react"
 import Link from "next/link"
 import { useRef, useState, type MouseEvent } from "react"
 
@@ -13,6 +13,7 @@ import { isModifiedClick } from "@/lib/events"
 import { COLOR_NAME, formatOpeningName } from "@/lib/game-text"
 import { toArchiveMonth, type GameView } from "@/lib/game-view"
 import { cn } from "@/lib/utils"
+import { getYouTubeVideoUrl } from "@/lib/youtube"
 
 const FEEDBACK_MS = 2000
 
@@ -151,7 +152,7 @@ export function GameTable({ accountId, games, caption, gameHref, onOpenGame }: G
                 </span>
               </td>
               <td
-                className={cn(cellClassName, "max-w-[240px] truncate text-text-secondary")}
+                className={cn(cellClassName, "max-w-[200px] truncate text-text-secondary")}
                 title={game.openingName ? formatOpeningName(game.openingName) : undefined}
               >
                 {formatOpeningName(game.openingName, "Desconhecida")}
@@ -184,6 +185,22 @@ export function GameTable({ accountId, games, caption, gameHref, onOpenGame }: G
                       Chess.com
                       <ExternalLink aria-hidden className="size-3.5" />
                       <span className="sr-only"> (abre em nova aba)</span>
+                    </a>
+                  ) : null}
+                  {game.video ? (
+                    // Icon only, so the actions still fit beside the columns.
+                    <a
+                      href={getYouTubeVideoUrl(game.video.videoId)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title={`Episódio ${game.video.code} no YouTube${game.video.isCertain ? "" : " (provável)"}`}
+                      className={cn(actionClassName, "w-11 justify-center px-0")}
+                    >
+                      <Youtube aria-hidden className="size-4.5" />
+                      <span className="sr-only">
+                        Assistir {game.video.isCertain ? "o episódio" : "o provável episódio"} da partida contra{" "}
+                        {game.opponent.username} no YouTube (abre em nova aba)
+                      </span>
                     </a>
                   ) : null}
                   <button

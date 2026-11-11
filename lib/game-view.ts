@@ -1,7 +1,10 @@
 import { getAccount, type AccountId } from "@/lib/accounts"
 import { getYearInAppTimeZone } from "@/lib/format"
 import { parseOpeningName } from "@/lib/openings"
+import { countMoves } from "@/lib/pgn"
+import { isRunReset } from "@/lib/rating-runs"
 import type { ChessComGame } from "@/types/chess-com"
+import type { GameVideo } from "@/types/game-videos"
 
 export type GameResult = "win" | "draw" | "loss"
 export type PieceColor = "white" | "black"
@@ -37,7 +40,12 @@ export type GameView = {
   openingName: string | null
   ecoCode: string | null
   moveCount: number
+  /** The episode of GM Krikor's channel that shows the game, or null when none does yet. */
+  video: GameVideo | null
 }
+
+/** Looks up a game's episode. The list lives on the server only. */
+export type FindGameVideo = (uuid: string) => GameVideo | null
 
 const DRAW_RESULT_CODES = new Set([
   "agreed",
@@ -47,10 +55,6 @@ const DRAW_RESULT_CODES = new Set([
   "50move",
   "timevsinsufficient",
 ])
-
-// The largest legitimate single-game change seen in the data is +130, while
-// still provisional. Resets are drops of about 2000 points.
-const RUN_RESET_THRESHOLD = 300
 
 const CHESS_COM_URL_PREFIX = "https://www.chess.com/"
 
@@ -82,29 +86,14 @@ export function parseEcoCode(pgn: string): string | null {
   return pgn.match(/^\[ECO "([^"]+)"\]$/m)?.[1] ?? null
 }
 
-/** Highest move number in the PGN movetext. The FEN often lacks move counters. */
-export function countMoves(pgn: string): number {
-  const movetext = pgn
-    .replace(/^\[.*\]\s*$/gm, "")
-    .replace(/\{[^}]*\}/g, "")
-  let highest = 0
-  for (const match of movetext.matchAll(/(\d+)\./g)) {
-    highest = Math.max(highest, Number(match[1]))
-  }
-  return highest
-}
-
 function computeRatingChange(
   rating: number,
   previousRating: number | undefined,
 ): Pick<GameView, "ratingDelta" | "isRunStart"> {
   if (previousRating === undefined) return { ratingDelta: null, isRunStart: false }
 
-  // Only the size of the jump marks a reset. A sign that contradicts the
-  // result is legitimate: a fair-play rating refund can land between games.
-  const delta = rating - previousRating
-  if (Math.abs(delta) > RUN_RESET_THRESHOLD) return { ratingDelta: null, isRunStart: true }
-  return { ratingDelta: delta, isRunStart: false }
+  if (isRunReset(previousRating, rating)) return { ratingDelta: null, isRunStart: true }
+  return { ratingDelta: rating - previousRating, isRunStart: false }
 }
 
 /** Each variant and time class has its own rating. */
@@ -116,6 +105,7 @@ function toGameView(
   game: ChessComGame,
   username: string,
   previousRating: number | undefined,
+  findVideo: FindGameVideo,
 ): GameView {
   const isWhite = game.white.username.toLowerCase() === username
   const own = isWhite ? game.white : game.black
@@ -146,6 +136,7 @@ function toGameView(
     openingName: parseOpeningName(game.eco),
     ecoCode: parseEcoCode(game.pgn),
     moveCount: countMoves(game.pgn),
+    video: findVideo(game.uuid),
   }
 }
 
@@ -157,6 +148,7 @@ function getOwnRating(game: ChessComGame, username: string): number {
 export function toGameViews(
   games: readonly ChessComGame[],
   accountId: AccountId,
+  findVideo: FindGameVideo,
 ): GameView[] {
   const username = getAccount(accountId).username.toLowerCase()
   const chronological = [...games].sort((a, b) => a.end_time - b.end_time)
@@ -165,7 +157,7 @@ export function toGameViews(
 
   return chronological.map((game) => {
     const pool = getRatingPool(game)
-    const view = toGameView(game, username, lastRatingByPool.get(pool))
+    const view = toGameView(game, username, lastRatingByPool.get(pool), findVideo)
     lastRatingByPool.set(pool, view.rating)
     return view
   })
@@ -180,6 +172,7 @@ export function findGameView(
   games: readonly ChessComGame[],
   accountId: AccountId,
   uuid: string,
+  findVideo: FindGameVideo,
 ): GameView | null {
   const target = games.find((game) => game.uuid === uuid)
   if (!target) return null
@@ -192,5 +185,10 @@ export function findGameView(
     .sort((a, b) => a.end_time - b.end_time)
   const previous = poolGames[poolGames.indexOf(target) - 1]
 
-  return toGameView(target, username, previous ? getOwnRating(previous, username) : undefined)
+  return toGameView(
+    target,
+    username,
+    previous ? getOwnRating(previous, username) : undefined,
+    findVideo,
+  )
 }

@@ -4,6 +4,7 @@ import { Suspense } from "react"
 import { GameBrowser } from "@/components/game-browser"
 import { GameBrowserSkeleton } from "@/components/game-browser-skeleton"
 import { fetchAccountGames } from "@/lib/chess-com"
+import { findGameVideo } from "@/lib/game-videos"
 import { toGameViews } from "@/lib/game-view"
 import { reportUnknownOpeningFamilies } from "@/lib/openings"
 import { requireAccount } from "@/lib/route-params"
@@ -29,7 +30,9 @@ export async function generateMetadata({ params }: PageProps<"/[account]">): Pro
 
 export default async function AccountGamesPage({ params }: PageProps<"/[account]">) {
   const account = await requireAccount(params)
-  const games = toGameViews(await fetchAccountGames(account.id), account.id)
+  const games = toGameViews(await fetchAccountGames(account.id), account.id, (uuid) =>
+    findGameVideo(account.id, uuid),
+  )
   reportUnknownOpeningFamilies(games.map((game) => game.openingName))
 
   return (

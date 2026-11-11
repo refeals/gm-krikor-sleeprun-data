@@ -12,9 +12,11 @@ import type { AccountId } from "@/lib/accounts"
 import { fetchAccountGames } from "@/lib/chess-com"
 import { formatFullDate, formatRatingDelta } from "@/lib/format"
 import { describeGame, formatGameFormat, formatMoveCount, formatOpeningName } from "@/lib/game-text"
+import { findGameVideo, findGameVideoTitle } from "@/lib/game-videos"
 import { findGameView, isGameUuid, type GameResult, type GameView } from "@/lib/game-view"
 import { requireAccount } from "@/lib/route-params"
 import { cn } from "@/lib/utils"
+import { getYouTubeVideoUrl } from "@/lib/youtube"
 
 // No game page is built ahead of time. Each one renders on its first visit
 // and is then cached; an empty list is what enables that (ISR).
@@ -40,7 +42,7 @@ const findGame = cache(async (accountId: AccountId, uuid: string) => {
   // Every month comes from the fetch cache. Only this game and the previous
   // one in its rating pool are derived, not the whole history.
   const rawGames = await fetchAccountGames(accountId)
-  const game = findGameView(rawGames, accountId, uuid)
+  const game = findGameView(rawGames, accountId, uuid, (gameUuid) => findGameVideo(accountId, gameUuid))
   const pgn = rawGames.find((candidate) => candidate.uuid === uuid)?.pgn
   return game && pgn !== undefined ? { game, pgn } : null
 })
@@ -65,6 +67,7 @@ export default async function GamePage({ params }: PageProps<"/[account]/jogo/[u
   if (!found) notFound()
   const { game, pgn } = found
   const headline = describeGame(game)
+  const videoTitle = game.video ? findGameVideoTitle(account.id, uuid) : null
 
   return (
     // At least a screen tall on mobile, so the sticky actions start at the
@@ -113,9 +116,26 @@ export default async function GamePage({ params }: PageProps<"/[account]/jogo/[u
             <span className="sr-only">{formatMoveCount(game.moveCount)}</span>
           </dd>
         </div>
+        {game.video ? (
+          <div className="flex gap-4 py-3">
+            <dt className="w-24 shrink-0 pt-0.5 text-sm text-text-muted">Vídeo</dt>
+            <dd className="flex min-w-0 flex-col gap-0.5">
+              <span className="text-base font-semibold">{videoTitle}</span>
+              <span className="text-xs text-text-muted">
+                {account.seriesName} {game.video.code}
+                {/* Matched from dates and video lengths; see scripts/sync-videos.mts. */}
+                {game.video.isCertain ? null : ", provavelmente neste episódio"}
+              </span>
+            </dd>
+          </div>
+        ) : null}
       </dl>
 
-      <GameActions url={game.url} pgn={pgn} />
+      <GameActions
+        url={game.url}
+        videoUrl={game.video ? getYouTubeVideoUrl(game.video.videoId) : null}
+        pgn={pgn}
+      />
     </main>
   )
 }

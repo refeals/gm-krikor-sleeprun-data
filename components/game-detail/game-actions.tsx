@@ -1,14 +1,20 @@
 "use client"
 
-import { ExternalLink } from "lucide-react"
+import { ExternalLink, Youtube } from "lucide-react"
 
 import { useTransientValue } from "@/hooks/use-transient-flag"
 import { copyText } from "@/lib/clipboard"
+import { cn } from "@/lib/utils"
 
 const FEEDBACK_MS = 2000
 
+const secondaryClassName =
+  "min-h-12 flex-1 rounded-card border border-border bg-surface px-4 text-base font-semibold whitespace-nowrap transition-colors duration-150 hover:border-border-strong active:bg-surface-pressed md:flex-none md:px-6"
+
 type GameActionsProps = {
   url: string | null
+  /** The episode that shows the game, on YouTube. */
+  videoUrl: string | null
   pgn: string
 }
 
@@ -23,7 +29,7 @@ const COPY_STATUS = {
  * settles at the end of <main> so the site footer below stays reachable.
  * Inline from 768px.
  */
-export function GameActions({ url, pgn }: GameActionsProps) {
+export function GameActions({ url, videoUrl, pgn }: GameActionsProps) {
   const [copyResult, setCopyResult] = useTransientValue<"copied" | "failed">(FEEDBACK_MS)
 
   async function handleCopy() {
@@ -45,13 +51,25 @@ export function GameActions({ url, pgn }: GameActionsProps) {
             <span className="sr-only"> (abre em nova aba)</span>
           </a>
         ) : null}
-        <button
-          type="button"
-          onClick={handleCopy}
-          className="min-h-12 rounded-card border border-border bg-surface px-6 text-base font-semibold transition-colors duration-150 hover:border-border-strong active:bg-surface-pressed"
-        >
-          {COPY_LABEL[copyResult ?? "idle"]}
-        </button>
+        {/* Side by side on mobile, so the sticky bar stays short. */}
+        <div className="flex gap-2">
+          {videoUrl ? (
+            <a
+              href={videoUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={cn(secondaryClassName, "flex items-center justify-center gap-2")}
+            >
+              <Youtube aria-hidden className="size-4.5 shrink-0" />
+              <span className="sr-only">Assistir o episódio no </span>
+              YouTube
+              <span className="sr-only"> (abre em nova aba)</span>
+            </a>
+          ) : null}
+          <button type="button" onClick={handleCopy} className={secondaryClassName}>
+            {COPY_LABEL[copyResult ?? "idle"]}
+          </button>
+        </div>
         <span role="status" className="sr-only">
           {copyResult ? COPY_STATUS[copyResult] : ""}
         </span>
