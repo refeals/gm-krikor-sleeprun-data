@@ -6,6 +6,8 @@ export const ACCOUNTS = [
     id: "sleeprerun",
     label: "SleepRun",
     username: "SleepReRun",
+    /** The account's series on GM Krikor's YouTube channel. */
+    seriesName: "SleepRun",
     timeClass: "rapid",
     timeControlLabel: "Rápida 10+0",
   },
@@ -13,6 +15,7 @@ export const ACCOUNTS = [
     id: "speedbemruim",
     label: "SpeedBemRuim",
     username: "SpeedBemRuim",
+    seriesName: "SpeedRuim",
     timeClass: "blitz",
     timeControlLabel: "Blitz 3+0",
   },

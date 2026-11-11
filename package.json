@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "check:openings": "node --no-warnings scripts/check-openings.mts"
+    "check:openings": "node --no-warnings scripts/check-openings.mts",
+    "sync:videos": "node --no-warnings --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/sync-videos.mts"
   },
   "dependencies": {
     "clsx": "^2.1.1",
