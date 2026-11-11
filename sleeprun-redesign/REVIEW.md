@@ -442,7 +442,24 @@ Medido com os dados reais em nov/2026: cada conta tem entre 1,5 mil e 1,8 mil jo
 
 O que já não usava rede: filtros, busca, ordenação e paginação (`replaceState` sobre os dados em memória), voltar e avançar no navegador, e o link "Jogos" do detalhe.
 
-## 9. Ordem sugerida
+## 9. Rodada de UX antes do deploy (ui-ux-pro-max)
+
+Auditoria contra as regras de referência, medida em Chrome headless:
+
+| Regra | Problema | Solução |
+|---|---|---|
+| Alvo previsível | Na tabela, só o nome do oponente abria a partida | A linha inteira abre. Ctrl/Cmd/Shift e clique do meio abrem em nova aba. Cliques em links, botões e seleção de texto são ignorados. O nome continua sendo o link real, para teclado e leitor de tela, lido como "Ver partida contra X". |
+| `tap-feedback-speed` (100 ms) | Com rede lenta, tocar num card ficava mais de 900 ms sem nenhum sinal | Barra de progresso no fim do card e spinner na tabela via `useLinkStatus` (os links de partida não fazem prefetch). Medido: aparece em 100 ms. |
+| `focus-on-route-change` | Ao chegar no detalhe, o foco ficava no `body` | O detalhe move o foco para o `<main>` ao montar |
+| `modal-escape` | O sheet não tinha botão de fechar, e a alça sugeria arrastar sem arrastar | Botão "Fechar filtros" e arrastar para baixo pela alça ou pelo título: mais de 80 px fecha, menos volta |
+| `touch-spacing` (8 px) | Paginação com 4 px entre botões | 8 px |
+| Título por página | As duas contas tinham o mesmo título, e o detalhe dizia "SleepRun" também na SpeedBemRuim | "SleepRun \| Jogos do GM Krikor", "SpeedBemRuim \| Jogos do GM Krikor", e o detalhe usa a conta certa. É também o que o anunciador de rotas lê. |
+| `press-feedback` | Chips e botões não reagiam ao toque | Estado `active` em chips, botões, paginação e seletor de conta |
+| `loading-buttons` | "PGN" da tabela não indicava a busca em andamento | Desabilitado com `aria-busy` enquanto copia |
+
+Mantidos: os chips em 375 px rolam na horizontal, e o último cortado indica a rolagem; o corpo de 15 px vem do HANDOFF.
+
+## 10. Ordem sugerida
 
 1. Camada de dados: itens da seção 8 e o `GameView`.
 2. Tokens, fontes e limpeza do shadcn.

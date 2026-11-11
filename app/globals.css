@@ -69,6 +69,17 @@
   --animate-sheet-out: sheet-out 180ms cubic-bezier(0.4, 0, 1, 1) forwards;
   --animate-fade-in: fade-in 240ms ease-out;
   --animate-fade-out: fade-out 180ms ease-in forwards;
+  /* Indeterminate progress while a game page loads after a tap. */
+  --animate-link-pending: link-pending 900ms ease-in-out infinite;
+
+  @keyframes link-pending {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(300%);
+    }
+  }
 
   @keyframes sheet-in {
     from {

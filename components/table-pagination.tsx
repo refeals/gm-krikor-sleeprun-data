@@ -16,7 +16,7 @@ type TablePaginationProps = {
 }
 
 const pageButtonClassName =
-  "flex size-11 items-center justify-center rounded-control text-base font-semibold tabular-nums transition-colors duration-150"
+  "flex size-11 items-center justify-center rounded-control text-base font-semibold tabular-nums transition-colors duration-150 active:bg-surface-pressed"
 
 export function TablePagination({
   currentPage,
@@ -45,7 +45,7 @@ export function TablePagination({
 
       {pageCount > 1 ? (
         <nav aria-label="Paginação">
-          <ul className="flex items-center gap-1">
+          <ul className="flex items-center gap-2">
             <li>
               <button
                 type="button"

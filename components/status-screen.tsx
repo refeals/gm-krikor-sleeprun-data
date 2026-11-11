@@ -38,9 +38,9 @@ export function StatusScreen({
 }
 
 const primaryClassName =
-  "flex min-h-13 items-center justify-center rounded-card bg-accent px-6 text-md font-bold text-on-accent transition-colors duration-150 hover:bg-accent-hover"
+  "flex min-h-13 items-center justify-center rounded-card bg-accent px-6 text-md font-bold text-on-accent transition-colors duration-150 hover:bg-accent-hover active:bg-accent-hover"
 const secondaryClassName =
-  "flex min-h-12 items-center justify-center rounded-card border border-border bg-surface px-6 text-base font-semibold transition-colors duration-150 hover:border-border-strong"
+  "flex min-h-12 items-center justify-center rounded-card border border-border bg-surface px-6 text-base font-semibold transition-colors duration-150 hover:border-border-strong active:bg-surface-pressed"
 
 type ActionStyle = { variant?: "primary" | "secondary" }
 

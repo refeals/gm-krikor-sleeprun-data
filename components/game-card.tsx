@@ -1,6 +1,7 @@
 import Link from "next/link"
 
 import { PieceSquare, RatingChange, ResultBadge } from "@/components/game-marks"
+import { LinkPendingBar } from "@/components/link-pending"
 import { formatAccuracy, formatGameDate } from "@/lib/format"
 import { formatGameFormat } from "@/lib/game-text"
 import type { GameView } from "@/lib/game-view"
@@ -32,8 +33,9 @@ export function GameCard({ game, href, accountTimeClass, onNavigate }: GameCardP
       // view would make the server build dozens of them per list visit.
       prefetch={false}
       onClick={onNavigate}
-      className="flex items-center gap-3 rounded-card border border-border bg-surface p-3 transition-colors duration-150 hover:border-border-strong active:bg-surface-pressed"
+      className="relative flex items-center gap-3 rounded-card border border-border bg-surface p-3 transition-colors duration-150 hover:border-border-strong active:bg-surface-pressed"
     >
+      <LinkPendingBar />
       <ResultBadge result={game.result} />
 
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">

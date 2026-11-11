@@ -61,7 +61,7 @@ export function AccountHeader({ currentId }: { currentId: AccountId }) {
                   aria-current={account.id === currentId ? "page" : undefined}
                   className={cn(
                     "flex min-h-11 items-center justify-center rounded-full px-5 text-base font-semibold transition-colors duration-150",
-                    isSelected ? "bg-accent text-on-accent" : "text-text-secondary hover:text-text",
+                    isSelected ? "bg-accent text-on-accent" : "text-text-secondary hover:text-text active:bg-surface-pressed",
                   )}
                 >
                   {account.label}

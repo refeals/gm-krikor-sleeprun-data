@@ -32,7 +32,7 @@ export function GameActions({ url, pgn }: GameActionsProps) {
             href={url}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex min-h-13 items-center justify-center gap-2 rounded-card bg-accent px-6 text-md font-bold text-on-accent transition-colors duration-150 hover:bg-accent-hover"
+            className="flex min-h-13 items-center justify-center gap-2 rounded-card bg-accent px-6 text-md font-bold text-on-accent transition-colors duration-150 hover:bg-accent-hover active:bg-accent-hover"
           >
             Abrir no Chess.com
             <ExternalLink aria-hidden className="size-4.5" />
@@ -42,7 +42,7 @@ export function GameActions({ url, pgn }: GameActionsProps) {
         <button
           type="button"
           onClick={handleCopy}
-          className="min-h-12 rounded-card border border-border bg-surface px-6 text-base font-semibold transition-colors duration-150 hover:border-border-strong cursor-pointer"
+          className="min-h-12 rounded-card border border-border bg-surface px-6 text-base font-semibold transition-colors duration-150 hover:border-border-strong active:bg-surface-pressed"
         >
           {isCopied ? "PGN copiado" : "Copiar PGN"}
         </button>

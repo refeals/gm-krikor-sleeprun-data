@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { cache } from "react"
 
+import { FocusMainOnMount } from "@/components/focus-main-on-mount"
 import { BackToListLink } from "@/components/game-detail/back-to-list-link"
 import { GameActions } from "@/components/game-detail/game-actions"
 import { PlayerRows } from "@/components/game-detail/player-rows"
@@ -55,7 +56,7 @@ export async function generateMetadata({
 }: PageProps<"/[account]/jogo/[uuid]">): Promise<Metadata> {
   const [account, { uuid }] = await Promise.all([requireAccount(params), params])
   const found = await findGame(account.id, uuid)
-  return found ? { title: `${describeGame(found.game)} | SleepRun` } : {}
+  return found ? { title: `${describeGame(found.game)} | ${account.label}` } : {}
 }
 
 export default async function GamePage({ params }: PageProps<"/[account]/jogo/[uuid]">) {
@@ -73,6 +74,7 @@ export default async function GamePage({ params }: PageProps<"/[account]/jogo/[u
       tabIndex={-1}
       className="flex min-h-dvh flex-col gap-6 focus-visible:outline-none md:min-h-0 md:max-w-[720px] mx-auto"
     >
+      <FocusMainOnMount />
       <header className="-mx-1 flex items-center justify-between pt-3">
         <BackToListLink accountId={account.id} uuid={uuid} />
         <ShareButton title={headline} />

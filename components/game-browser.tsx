@@ -143,7 +143,7 @@ export function GameBrowser({ accountId, games }: GameBrowserProps) {
                 ? "Filtros"
                 : `Filtros, ${sheetFilterCount} ${sheetFilterCount === 1 ? "ativo" : "ativos"}`
             }
-            className="relative flex size-12 shrink-0 items-center justify-center rounded-control border border-border bg-surface transition-colors duration-150 hover:border-border-strong md:hidden"
+            className="relative flex size-12 shrink-0 items-center justify-center rounded-control border border-border bg-surface transition-colors duration-150 hover:border-border-strong active:bg-surface-pressed md:hidden"
           >
             <SlidersHorizontal aria-hidden className="size-5" />
             {sheetFilterCount > 0 ? (
@@ -211,7 +211,7 @@ export function GameBrowser({ accountId, games }: GameBrowserProps) {
             <button
               type="button"
               onClick={handleClearFilters}
-              className="min-h-12 rounded-card border border-border bg-surface px-5 text-base font-semibold transition-colors duration-150 hover:border-border-strong"
+              className="min-h-12 rounded-card border border-border bg-surface px-5 text-base font-semibold transition-colors duration-150 hover:border-border-strong active:bg-surface-pressed"
             >
               Limpar filtros
             </button>
@@ -252,7 +252,7 @@ export function GameBrowser({ accountId, games }: GameBrowserProps) {
               <button
                 type="button"
                 onClick={handleLoadMore}
-                className="mb-4 min-h-12 w-full rounded-card border border-border bg-surface text-base font-semibold transition-colors duration-150 hover:border-border-strong"
+                className="mb-4 min-h-12 w-full rounded-card border border-border bg-surface text-base font-semibold transition-colors duration-150 hover:border-border-strong active:bg-surface-pressed"
               >
                 Carregar mais {Math.min(query.size, remainingCount)}
               </button>

@@ -18,9 +18,9 @@ export function ChoiceChip({ isPressed, onClick, children, surface = "page" }: C
       onClick={onClick}
       className={cn(
         "min-h-11 shrink-0 rounded-full border px-4 text-base font-semibold transition-colors duration-150",
-        isPressed && "border-accent bg-accent text-on-accent",
-        !isPressed && surface === "page" && "border-border bg-surface text-text hover:border-border-strong",
-        !isPressed && surface === "sheet" && "border-border-strong bg-bg text-text hover:border-text-muted",
+        isPressed && "border-accent bg-accent text-on-accent active:bg-accent-hover",
+        !isPressed && surface === "page" && "border-border bg-surface text-text hover:border-border-strong active:bg-surface-pressed",
+        !isPressed && surface === "sheet" && "border-border-strong bg-bg text-text hover:border-text-muted active:bg-surface-pressed",
       )}
     >
       {children}

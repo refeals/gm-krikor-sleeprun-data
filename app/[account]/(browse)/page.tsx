@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import { Suspense } from "react"
 
 import { GameBrowser } from "@/components/game-browser"
@@ -17,6 +18,13 @@ export function generateStaticParams(): { account: string }[] {
 // Regenerated at most every 5 minutes. Filters are read on the client so
 // they don't make the route dynamic.
 export const revalidate = 300
+
+// Each account gets its own tab title, which is also what the route
+// announcer reads to screen readers after switching accounts.
+export async function generateMetadata({ params }: PageProps<"/[account]">): Promise<Metadata> {
+  const account = await requireAccount(params)
+  return { title: `${account.label} | Jogos do GM Krikor` }
+}
 
 export default async function AccountGamesPage({ params }: PageProps<"/[account]">) {
   const account = await requireAccount(params)

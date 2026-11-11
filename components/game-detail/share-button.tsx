@@ -33,7 +33,7 @@ export function ShareButton({ title }: { title: string }) {
         type="button"
         onClick={handleShare}
         aria-label="Compartilhar"
-        className="flex size-11 items-center justify-center rounded-control transition-colors duration-150 hover:bg-surface"
+        className="flex size-11 items-center justify-center rounded-control transition-colors duration-150 hover:bg-surface active:bg-surface-pressed"
       >
         <Share aria-hidden className="size-5" />
       </button>
