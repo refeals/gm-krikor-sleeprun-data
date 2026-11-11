@@ -1,29 +1,40 @@
-import Providers from "@/app/providers"
-import type { Metadata } from "next"
-import { Roboto } from "next/font/google"
+import type { Metadata, Viewport } from "next"
+import { Inter, Space_Grotesk } from "next/font/google"
+
+import { SiteFooter } from "@/components/site-footer"
+
 import "./globals.css"
 
-const roboto = Roboto({
-  weight: ["400", "500", "700"],
+const inter = Inter({
   subsets: ["latin"],
+  display: "swap",
+  variable: "--font-inter",
+})
+
+const spaceGrotesk = Space_Grotesk({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-space-grotesk",
 })
 
 export const metadata: Metadata = {
-  title: "Jogos SleepRun",
-  description: "Jogos SleepRun - Criado por Rafael Siqueira",
+  title: "Jogos do GM Krikor no SleepRun",
+  description:
+    "Partidas do GM Krikor Mekhitarian nas contas SleepReRun e SpeedBemRuim do Chess.com.",
 }
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode
-}>) {
+export const viewport: Viewport = {
+  themeColor: "#0e1411",
+  colorScheme: "dark",
+  viewportFit: "cover",
+}
+
+export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="pt-BR">
-      <body
-        className={`${roboto.className} antialiased bg-green-950 text-gray-200`}
-      >
-        <Providers>{children}</Providers>
+    <html lang="pt-BR" className={`${inter.variable} ${spaceGrotesk.variable}`}>
+      <body>
+        {children}
+        <SiteFooter />
       </body>
     </html>
   )

@@ -40,12 +40,14 @@ type PieceColor = "white" | "black"
 type GameView = {
   uuid: string
   url: string
-  endedAt: Date
+  endedAt: number              // epoch em ms
   result: GameResult
   termination: string          // código do Chess.com: checkmated, resigned, timeout, agreed…
   color: PieceColor            // cor do Krikor
+  timeClass: string            // rapid, blitz…
+  timeControl: string          // "600", "180+2"
   rating: number               // rating do Krikor depois do jogo
-  ratingDelta: number | null   // null no primeiro jogo e em início de run
+  ratingDelta: number | null   // null no primeiro jogo do ritmo e em início de run
   isRunStart: boolean
   opponent: { username: string; rating: number }
   accuracy: { own: number; opponent: number } | null
@@ -59,7 +61,7 @@ Regras:
 
 - **Lado do Krikor:** `white.username` ou `black.username` igual à conta, sem diferenciar maiúsculas.
 - **Resultado:** `win` vira vitória. `agreed`, `repetition`, `stalemate`, `insufficient`, `50move` e `timevsinsufficient` viram empate. O resto (`checkmated`, `resigned`, `timeout`, `abandoned`) vira derrota.
-- **`ratingDelta`:** rating deste jogo menos o rating do jogo anterior da mesma conta, em ordem cronológica. Se o sinal contradiz o resultado (vitória com delta negativo, derrota com delta positivo) ou se o valor absoluto passa de 300, o jogo é `isRunStart` e `ratingDelta` fica `null`.
+- **`ratingDelta`:** rating deste jogo menos o rating do jogo anterior da mesma conta e do mesmo ritmo, em ordem cronológica. O ritmo importa porque a SleepReRun tem 4 jogos de blitz no meio de 1561 de rápida, e cada ritmo tem seu próprio rating. Se o sinal contradiz o resultado (vitória com delta negativo, derrota com delta positivo) ou se o valor absoluto passa de 300, o jogo é `isRunStart` e `ratingDelta` fica `null`.
 - **`openingName`:** tirar o prefixo `https://www.chess.com/openings/`, cortar no primeiro trecho que começa com número de lance (`6.Be3`, `1...d5`) e trocar `-` por espaço. Sem `eco`, `null`.
 - **`moveCount`:** maior número de lance no movetext do PGN.
 - **Formato da conta:** constante na configuração de contas (`ACCOUNTS`), já que cada conta tem um formato só: SleepReRun "Rápida 10+0", SpeedBemRuim "Blitz 3+0". Assim o header não depende dos dados e continua de pé nas telas de carregamento e erro.
@@ -77,7 +79,7 @@ Regras:
 - `/` redireciona para `/sleeprerun`.
 - `/[account]` é a lista. `account` aceita `sleeprerun` e `speedbemruim`. Outro valor dá 404 (`dynamicParams = false`, seção 8).
 - `/[account]/jogo/[uuid]` é o detalhe, renderizado no servidor (seção 8, item 6). Se o `uuid` não existir na conta, `notFound()`.
-- `app/[account]/layout.tsx` tem o header (seletor de conta, h1, linha de formato). Assim `loading.tsx` e `error.tsx`, que ficam dentro do layout, mantêm o header de pé.
+- `app/[account]/layout.tsx` valida a conta. O header da lista (seletor de conta, h1, linha de formato) fica no grupo `app/[account]/(browse)/layout.tsx`, junto com a página da lista, o `loading.tsx` e o `error.tsx`, que assim mantêm o header de pé. O detalhe fica fora do grupo porque tem cabeçalho próprio.
 - No Next 16, `params` é uma Promise: `const { account } = await params`.
 - Filtros na query string, com as mesmas chaves do código: `q`, `result` (`win|draw|loss`), `color` (`white|black`), `year`, `sort` (`newest|oldest|accuracy`), `page`, `size`. Valor padrão não aparece na URL.
 - A URL é a fonte da verdade. O store de filtros do zustand sai. A busca atualiza a URL com `router.replace` depois de 300 ms sem digitar.
@@ -376,12 +378,16 @@ Medido com os dados reais em nov/2026: cada conta tem entre 1,5 mil e 1,8 mil jo
 1. **A busca sai da Server Action.** Pela doc do 16, Server Functions servem para mutação e o cliente despacha uma de cada vez; busca de dados fica em Server Component. `fetchers/getGames.ts` vira um módulo só de servidor (`import "server-only"`), chamado pelas páginas.
 2. **Erros sobem.** Checar `res.ok` na lista de arquivos e em cada mês e lançar erro no lugar do `return []`. Quem mostra a tela de erro é o `error.tsx`.
 3. **Cache por mês no `fetch`:**
-   - lista de arquivos: `next: { revalidate: 3600 }`
-   - meses passados: `cache: "force-cache"`, porque não mudam mais
+   - lista de arquivos: `next: { revalidate: 300 }`, para um mês novo aparecer logo na virada
    - mês corrente: `next: { revalidate: 300 }`
+   - meses passados: `next: { revalidate: 86400 }`
+
+   Meses passados revalidam uma vez por dia em vez de usar `force-cache`. O mês que acabou de fechar pode ter sido guardado nos seus últimos minutos, enquanto ainda era o corrente, e com `force-cache` ficaria sem os jogos finais para sempre.
 
    A escolha pelo cache do `fetch` vem da doc de `use cache` ("Runtime caching considerations"). Em serverless, o handler padrão do `use cache` fica em memória e normalmente não guarda entradas entre requests. O cache do `fetch` persiste entre requests e entre deploys.
-4. **Lista estática com ISR**, em `app/[account]/page.tsx`:
+
+   O Chess.com limita requisições em paralelo, então as buscas rodam no máximo 6 por vez, com até 3 tentativas em resposta 429 ou 5xx.
+4. **Lista estática com ISR**, em `app/[account]/(browse)/page.tsx`:
    - `generateStaticParams` devolve as duas contas, e `dynamicParams = false` faz qualquer outra dar 404. Essa config fica no `page.tsx` da lista. Num layout ela valeria para os filhos e derrubaria as páginas de detalhe.
    - `export const revalidate = 300`.
    - A página monta o `GameView[]` no servidor e passa para o componente cliente da lista como prop.

@@ -1,22 +1,7 @@
-import Home from "@/app/(components)/home"
-import { getGames } from "@/fetchers/getGames"
-import {
-  dehydrate,
-  HydrationBoundary,
-  QueryClient,
-} from "@tanstack/react-query"
+import { redirect } from "next/navigation"
 
-export default async function Index() {
-  const queryClient = new QueryClient()
+import { DEFAULT_ACCOUNT_ID } from "@/lib/accounts"
 
-  await queryClient.prefetchQuery({
-    queryKey: ["games"],
-    queryFn: () => getGames(),
-  })
-
-  return (
-    <HydrationBoundary state={dehydrate(queryClient)}>
-      <Home />
-    </HydrationBoundary>
-  )
+export default function Index() {
+  redirect(`/${DEFAULT_ACCOUNT_ID}`)
 }

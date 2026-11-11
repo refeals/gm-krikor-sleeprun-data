@@ -1,0 +1,74 @@
+import { formatTimeControl } from "@/lib/format"
+import type { GameResult, GameView, PieceColor } from "@/lib/game-view"
+
+export const RESULT_LABEL: Record<GameResult, string> = {
+  win: "Vitória",
+  draw: "Empate",
+  loss: "Derrota",
+}
+
+export const RESULT_LETTER: Record<GameResult, string> = {
+  win: "V",
+  draw: "E",
+  loss: "D",
+}
+
+export const COLOR_LABEL: Record<PieceColor, string> = {
+  white: "Brancas",
+  black: "Pretas",
+}
+
+const RESULT_VERB: Record<GameResult, string> = {
+  win: "venceu",
+  draw: "empatou",
+  loss: "perdeu",
+}
+
+const COLOR_PHRASE: Record<PieceColor, string> = {
+  white: "de brancas",
+  black: "de pretas",
+}
+
+const TERMINATION_PHRASE: Record<string, string> = {
+  checkmated: "por xeque-mate",
+  resigned: "por desistência",
+  timeout: "no tempo",
+  abandoned: "por abandono",
+  agreed: "por acordo",
+  repetition: "por repetição",
+  stalemate: "por afogamento",
+  insufficient: "por material insuficiente",
+  "50move": "pela regra dos 50 lances",
+  timevsinsufficient: "no tempo, com material insuficiente",
+}
+
+const TIME_CLASS_LABEL: Record<string, string> = {
+  rapid: "Rápida",
+  blitz: "Blitz",
+  bullet: "Bullet",
+  daily: "Diária",
+}
+
+export function formatMoveCount(moveCount: number): string {
+  return moveCount === 1 ? "1 lance" : `${moveCount} lances`
+}
+
+/** "Krikor venceu de brancas por xeque-mate em 42 lances". */
+export function describeGame(game: GameView): string {
+  const termination = TERMINATION_PHRASE[game.termination]
+  return [
+    "Krikor",
+    RESULT_VERB[game.result],
+    COLOR_PHRASE[game.color],
+    termination,
+    `em ${formatMoveCount(game.moveCount)}`,
+  ]
+    .filter(Boolean)
+    .join(" ")
+}
+
+/** "Rápida 10+0". */
+export function formatGameFormat(game: Pick<GameView, "timeClass" | "timeControl">): string {
+  const label = TIME_CLASS_LABEL[game.timeClass] ?? game.timeClass
+  return `${label} ${formatTimeControl(game.timeControl)}`
+}
