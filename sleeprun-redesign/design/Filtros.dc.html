@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>SleepRun — Filtros</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0F1115}
+a{color:#E8C468}a:hover{color:#F3D98F}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: flex-end; background: #07080A; color: #ECEDEF; font-family: Inter, system-ui, sans-serif; overflow: hidden">
+
+<a href="Main.dc.html" aria-label="Fechar filtros" style="flex: 1; display: block"></a>
+
+<section role="dialog" aria-label="Filtros" style="display: flex; flex-direction: column; border-radius: 24px 24px 0 0; background: #181B22; border-top: 1px solid #2E333D">
+<div aria-hidden="true" style="align-self: center; width: 40px; height: 5px; margin-top: 10px; border-radius: 999px; background: #3A404B"></div>
+<header style="display: flex; align-items: center; justify-content: space-between; padding: 8px 8px 4px 20px">
+<h1 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 700">Filtros</h1>
+<button onClick="{{reset}}" style="height: 44px; padding: 0 12px; border: 0; background: transparent; color: #E8C468; font-family: inherit; font-size: 15px; font-weight: 600; cursor: pointer">Limpar</button>
+</header>
+
+<div style="display: flex; flex-direction: column; gap: 20px; padding: 12px 20px 16px 20px">
+<sc-for list="{{groups}}" as="grp" hint-placeholder-count="4">
+<fieldset style="border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px">
+<legend style="padding: 0; margin-bottom: 10px; font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #A3A9B4">{{grp.title}}</legend>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<sc-for list="{{grp.options}}" as="opt" hint-placeholder-count="3">
+<button aria-pressed="{{opt.pressed}}" onClick="{{opt.pick}}" style="{{opt.style}}">{{opt.label}}</button>
+</sc-for>
+</div>
+</fieldset>
+</sc-for>
+
+<label style="display: flex; flex-direction: column; gap: 10px">
+<span style="font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #A3A9B4">Abertura</span>
+<select style="height: 48px; padding: 0 12px; border-radius: 12px; border: 1px solid #2E333D; background: #0F1115; color: #ECEDEF; font-family: inherit; font-size: 16px">
+<option>Todas as aberturas</option>
+<option>Defesa Siciliana</option>
+<option>Gambito da Dama</option>
+<option>Ruy López</option>
+<option>Caro-Kann</option>
+</select>
+</label>
+</div>
+
+<div style="padding: 12px 20px 28px 20px; border-top: 1px solid #262A33">
+<a href="Main.dc.html" style="height: 52px; border-radius: 14px; background: #E8C468; color: #0F1115; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; text-decoration: none">Aplicar filtros</a>
+</div>
+</section>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { result: 'Todos', rhythm: 'Todos', color: 'Ambas', period: '30 dias' };
+  }
+  renderVals() {
+    const defs = [
+      { key: 'result', title: 'Resultado', options: ['Todos', 'Vitórias', 'Empates', 'Derrotas'] },
+      { key: 'rhythm', title: 'Ritmo', options: ['Todos', 'Bullet', 'Blitz', 'Rápida'] },
+      { key: 'color', title: 'Cor', options: ['Ambas', 'Brancas', 'Pretas'] },
+      { key: 'period', title: 'Período', options: ['7 dias', '30 dias', 'Este ano', 'Tudo'] }
+    ];
+    const groups = defs.map((d) => ({
+      title: d.title,
+      options: d.options.map((label) => {
+        const on = this.state[d.key] === label;
+        return {
+          label,
+          pressed: on ? 'true' : 'false',
+          pick: () => this.setState({ [d.key]: label }),
+          style: 'height: 44px; padding: 0 16px; border-radius: 999px; font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; border: 1px solid ' + (on ? '#E8C468' : '#2E333D') + '; background: ' + (on ? '#E8C468' : '#0F1115') + '; color: ' + (on ? '#0F1115' : '#ECEDEF')
+        };
+      })
+    }));
+    return {
+      groups,
+      reset: () => this.setState({ result: 'Todos', rhythm: 'Todos', color: 'Ambas', period: 'Tudo' })
+    };
+  }
+}
+</script>
+</body>
+</html>

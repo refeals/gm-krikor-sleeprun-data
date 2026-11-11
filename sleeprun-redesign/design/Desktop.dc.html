@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>SleepRun — Jogos (desktop)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0F1115}
+a{color:#E8C468}a:hover{color:#F3D98F}
+input::placeholder{color:#8A909B}
+</style>
+</helmet>
+<div style="min-height: 980px; background: #0F1115; color: #ECEDEF; font-family: Inter, system-ui, sans-serif">
+<div style="max-width: 1200px; margin: 0 auto; padding: 32px 24px 48px 24px; display: flex; flex-direction: column; gap: 24px">
+
+<header style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #A3A9B4">SleepRun</span>
+<h1 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 36px; font-weight: 700; line-height: 1.1">Jogos do GM Krikor</h1>
+<p style="margin: 0; font-size: 15px; color: #B4BAC4">Partidas recentes do GM Krikor Mekhitarian, com precisão, abertura e resultado.</p>
+</div>
+<nav aria-label="Links" style="display: flex; gap: 8px; flex-wrap: wrap">
+<a href="#" style="height: 44px; padding: 0 16px; border-radius: 12px; border: 1px solid #262A33; background: #181B22; color: #ECEDEF; display: flex; align-items: center; font-size: 14px; font-weight: 600; text-decoration: none">Site oficial</a>
+<a href="#" style="height: 44px; padding: 0 16px; border-radius: 12px; border: 1px solid #262A33; background: #181B22; color: #ECEDEF; display: flex; align-items: center; font-size: 14px; font-weight: 600; text-decoration: none">YouTube</a>
+</nav>
+</header>
+
+<section aria-label="Resumo" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px">
+<div style="padding: 16px; border-radius: 16px; background: #181B22; border: 1px solid #262A33; display: flex; flex-direction: column; gap: 4px"><span style="font-size: 13px; color: #A3A9B4">Jogos</span><span style="font-family: 'Space Grotesk', sans-serif; font-size: 28px; font-weight: 700">6</span></div>
+<div style="padding: 16px; border-radius: 16px; background: #181B22; border: 1px solid #262A33; display: flex; flex-direction: column; gap: 4px"><span style="font-size: 13px; color: #A3A9B4">Vitórias</span><span style="font-family: 'Space Grotesk', sans-serif; font-size: 28px; font-weight: 700; color: #6EDB9A">4</span></div>
+<div style="padding: 16px; border-radius: 16px; background: #181B22; border: 1px solid #262A33; display: flex; flex-direction: column; gap: 4px"><span style="font-size: 13px; color: #A3A9B4">Empates / Derrotas</span><span style="font-family: 'Space Grotesk', sans-serif; font-size: 28px; font-weight: 700">1 / <span style="color: #FF9B7A">1</span></span></div>
+<div style="padding: 16px; border-radius: 16px; background: #181B22; border: 1px solid #262A33; display: flex; flex-direction: column; gap: 4px"><span style="font-size: 13px; color: #A3A9B4">Precisão média</span><span style="font-family: 'Space Grotesk', sans-serif; font-size: 28px; font-weight: 700">89,7%</span></div>
+</section>
+
+<div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center">
+<label style="flex: 1 1 280px; height: 48px; display: flex; align-items: center; gap: 8px; padding: 0 14px; border-radius: 12px; background: #181B22; border: 1px solid #262A33">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#A3A9B4" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+<input type="search" aria-label="Buscar por oponente ou abertura" placeholder="Buscar por oponente ou abertura" style="flex: 1; min-width: 0; border: 0; outline: none; background: transparent; color: #ECEDEF; font-size: 15px; font-family: inherit">
+</label>
+<div role="group" aria-label="Resultado" style="display: flex; gap: 8px; flex-wrap: wrap">
+<button aria-pressed="true" style="height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid #E8C468; background: #E8C468; color: #0F1115; font-family: inherit; font-size: 14px; font-weight: 600">Todos</button>
+<button aria-pressed="false" style="height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid #262A33; background: #181B22; color: #ECEDEF; font-family: inherit; font-size: 14px; font-weight: 600">Vitórias</button>
+<button aria-pressed="false" style="height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid #262A33; background: #181B22; color: #ECEDEF; font-family: inherit; font-size: 14px; font-weight: 600">Empates</button>
+<button aria-pressed="false" style="height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid #262A33; background: #181B22; color: #ECEDEF; font-family: inherit; font-size: 14px; font-weight: 600">Derrotas</button>
+</div>
+<select aria-label="Ritmo" style="height: 48px; padding: 0 12px; border-radius: 12px; border: 1px solid #262A33; background: #181B22; color: #ECEDEF; font-family: inherit; font-size: 14px"><option>Todos os ritmos</option><option>Bullet</option><option>Blitz</option><option>Rápida</option></select>
+</div>
+
+<div style="overflow-x: auto; border-radius: 16px; border: 1px solid #262A33; background: #181B22">
+<table style="width: 100%; min-width: 860px; border-collapse: collapse; font-size: 14px">
+<thead>
+<tr style="text-align: left; color: #A3A9B4; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em">
+<th scope="col" style="padding: 14px 16px; font-weight: 600; border-bottom: 1px solid #262A33">Resultado</th>
+<th scope="col" style="padding: 14px 16px; font-weight: 600; border-bottom: 1px solid #262A33">Oponente</th>
+<th scope="col" style="padding: 14px 16px; font-weight: 600; border-bottom: 1px solid #262A33">Abertura</th>
+<th scope="col" style="padding: 14px 16px; font-weight: 600; border-bottom: 1px solid #262A33">Precisão</th>
+<th scope="col" style="padding: 14px 16px; font-weight: 600; border-bottom: 1px solid #262A33">Lances</th>
+<th scope="col" style="padding: 14px 16px; font-weight: 600; border-bottom: 1px solid #262A33">Data</th>
+<th scope="col" style="padding: 14px 16px; font-weight: 600; border-bottom: 1px solid #262A33; text-align: right">Ações</th>
+</tr>
+</thead>
+<tbody>
+<sc-for list="{{rows}}" as="r" hint-placeholder-count="6">
+<tr>
+<td style="padding: 12px 16px; border-bottom: 1px solid #22262E"><span style="{{r.badgeStyle}}">{{r.resultLabel}}</span></td>
+<td style="padding: 12px 16px; border-bottom: 1px solid #22262E"><span style="display: flex; align-items: center; gap: 8px"><span aria-hidden="true" style="{{r.pieceStyle}}"></span><span style="font-weight: 600">{{r.opp}}</span><span style="color: #A3A9B4; font-size: 12px">{{r.rating}}</span></span></td>
+<td style="padding: 12px 16px; border-bottom: 1px solid #22262E; color: #C4C9D1">{{r.opening}}</td>
+<td style="padding: 12px 16px; border-bottom: 1px solid #22262E; font-family: 'Space Grotesk', sans-serif; font-weight: 700">{{r.acc}}</td>
+<td style="padding: 12px 16px; border-bottom: 1px solid #22262E">{{r.moves}}</td>
+<td style="padding: 12px 16px; border-bottom: 1px solid #22262E; color: #C4C9D1">{{r.date}}</td>
+<td style="padding: 12px 16px; border-bottom: 1px solid #22262E"><span style="display: flex; justify-content: flex-end; gap: 6px"><a href="#" style="height: 36px; padding: 0 12px; border-radius: 10px; background: #E8C468; color: #0F1115; display: flex; align-items: center; font-size: 13px; font-weight: 700; text-decoration: none">Ver partida</a><button style="height: 36px; padding: 0 12px; border-radius: 10px; border: 1px solid #2E333D; background: transparent; color: #ECEDEF; font-family: inherit; font-size: 13px; font-weight: 600">PGN</button></span></td>
+</tr>
+</sc-for>
+</tbody>
+</table>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; font-size: 14px; color: #A3A9B4">
+<span>Mostrando 1–6 de 6</span>
+<span style="display: flex; gap: 8px">
+<button disabled style="height: 44px; padding: 0 16px; border-radius: 12px; border: 1px solid #262A33; background: #181B22; color: #6B7280; font-family: inherit; font-size: 14px; font-weight: 600">Anterior</button>
+<button disabled style="height: 44px; padding: 0 16px; border-radius: 12px; border: 1px solid #262A33; background: #181B22; color: #6B7280; font-family: inherit; font-size: 14px; font-weight: 600">Próxima</button>
+</span>
+</div>
+
+<footer style="padding-top: 16px; border-top: 1px solid #262A33; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; font-size: 13px; color: #A3A9B4">
+<span>Criado por Rafael Siqueira para a comunidade do GM Krikor Mekhitarian.</span>
+<span><a href="#">Site oficial</a> · <a href="#">YouTube</a> · <a href="#">GitHub</a></span>
+</footer>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":980}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const data = [
+      ['oponente_exemplo1', '2614', 'Defesa Siciliana, Najdorf', 'V', '93,4%', 42, '9 nov 2026', true],
+      ['oponente_exemplo2', '2702', 'Gambito da Dama Recusado', 'E', '90,1%', 58, '9 nov 2026', false],
+      ['oponente_exemplo3', '2588', 'Abertura Inglesa', 'V', '88,7%', 37, '8 nov 2026', true],
+      ['oponente_exemplo4', '2731', 'Defesa Caro-Kann, Avanço', 'D', '84,2%', 64, '7 nov 2026', false],
+      ['oponente_exemplo5', '2655', 'Ruy López, Defesa Berlim', 'V', '95,0%', 49, '6 nov 2026', true],
+      ['oponente_exemplo6', '2570', 'Defesa Índia do Rei', 'V', '86,9%', 31, '6 nov 2026', false]
+    ];
+    const map = { V: ['Vitória', '#6EDB9A'], D: ['Derrota', '#FF9B7A'], E: ['Empate', '#A9B0BC'] };
+    const rows = data.map(([opp, rating, opening, r, acc, moves, date, white]) => ({
+      opp, rating, opening, acc, moves, date,
+      resultLabel: map[r][0],
+      badgeStyle: 'display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border-radius: 999px; font-size: 12px; font-weight: 700; color: #0F1115; background: ' + map[r][1],
+      pieceStyle: 'width: 10px; height: 10px; flex: none; border-radius: 3px; border: 1px solid #6B7280; background: ' + (white ? '#F5F5F4' : '#0F1115')
+    }));
+    return { rows };
+  }
+}
+</script>
+</body>
+</html>

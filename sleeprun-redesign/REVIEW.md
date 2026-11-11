@@ -1,0 +1,376 @@
+# Revisão do redesign do SleepRun
+
+Revisão feita em 11 nov 2026, antes da implementação, sobre o `HANDOFF.md`, as seis telas em `design/`, o código atual e uma amostra real da API pública do Chess.com (as duas contas, vários meses entre 2021 e 2026).
+
+**Este arquivo complementa o `HANDOFF.md`. Onde os dois discordam, vale este.**
+
+## 1. Decisões
+
+1. O seletor de conta (SleepRun / SpeedBemRuim) vai para o header, no lugar do eyebrow "SLEEPRUN" e do botão de menu. O menu sai.
+2. O rating do Krikor aparece no card, no detalhe e num destaque no topo da lista (rating atual, gráfico da subida, placar).
+3. Nomes de abertura ficam em inglês, como vêm do Chess.com.
+4. Os ajustes visuais da seção 6 entram: neutros puxados para o verde de tabuleiro, rótulos sem caixa alta, caixa só em elemento clicável.
+5. O detalhe ganha rota própria, os filtros vão para a URL, e a lista mobile usa "Carregar mais".
+
+## 2. O que a API entrega de verdade
+
+O design foi montado com dados de exemplo que não batem com o conteúdo real. Verificado na API:
+
+- **As contas são speedruns.** O rating começa perto de 400 e sobe até perto de 2500, e os oponentes acompanham. Em nov/2026 a SleepReRun está entre 408 e 543. A amostra do design (oponentes de 2588 a 2731) não representa o site.
+- **Existem resets de run.** Em dez/2024 a SpeedBemRuim caiu 2018 pontos depois de uma vitória. Isso marca o início de uma run nova.
+- **Cada conta tem um formato só.** SleepReRun: 100% rapid 10+0. SpeedBemRuim: 100% blitz 3+0. Ritmo não diferencia jogo nenhum dentro de uma conta.
+- **Precisão é opcional.** `accuracies` só existe em jogos analisados. SpeedBemRuim em nov/2026: 15 de 51 jogos têm precisão.
+- **`rating` é o rating depois do jogo.** Conferido: a variação entre dois jogos seguidos acompanha o resultado do segundo jogo. A maior variação legítima vista foi +130 (rating provisório no começo da conta).
+- **`eco` é uma URL**, por exemplo `https://www.chess.com/openings/Queens-Gambit-Accepted-Old-Variation`. O código ECO (`D20`) está no header `[ECO "D20"]` do PGN.
+- **O FEN muitas vezes vem sem contador de lances.** Em 108 de 144 jogos da amostra o FEN termina em `b - -`, e a coluna "Movimentos" atual mostra `-`. O número de lances tem que sair do PGN.
+- **Empate não é tratado hoje.** O código atual mostra 0/0 num empate.
+- **`result` diz como o jogo acabou.** Dá para escrever "venceu por xeque-mate", "perdeu no tempo".
+
+### Modelo derivado
+
+Calcular uma vez por conta (memo), a partir de `Game`, e filtrar sobre ele:
+
+```ts
+type GameResult = "win" | "draw" | "loss"
+type PieceColor = "white" | "black"
+
+type GameView = {
+  uuid: string
+  url: string
+  pgn: string
+  endedAt: Date
+  result: GameResult
+  termination: string          // código do Chess.com: checkmated, resigned, timeout, agreed…
+  color: PieceColor            // cor do Krikor
+  rating: number               // rating do Krikor depois do jogo
+  ratingDelta: number | null   // null no primeiro jogo e em início de run
+  isRunStart: boolean
+  opponent: { username: string; rating: number }
+  accuracy: { own: number; opponent: number } | null
+  openingName: string | null   // do slug de `eco`, em inglês
+  ecoCode: string | null       // header [ECO] do PGN
+  moveCount: number
+}
+```
+
+Regras:
+
+- **Lado do Krikor:** `white.username` ou `black.username` igual à conta, sem diferenciar maiúsculas.
+- **Resultado:** `win` vira vitória. `agreed`, `repetition`, `stalemate`, `insufficient`, `50move` e `timevsinsufficient` viram empate. O resto (`checkmated`, `resigned`, `timeout`, `abandoned`) vira derrota.
+- **`ratingDelta`:** rating deste jogo menos o rating do jogo anterior da mesma conta, em ordem cronológica. Se o sinal contradiz o resultado (vitória com delta negativo, derrota com delta positivo) ou se o valor absoluto passa de 300, o jogo é `isRunStart` e `ratingDelta` fica `null`.
+- **`openingName`:** tirar o prefixo `https://www.chess.com/openings/`, cortar no primeiro trecho que começa com número de lance (`6.Be3`, `1...d5`) e trocar `-` por espaço. Sem `eco`, `null`.
+- **`moveCount`:** maior número de lance no movetext do PGN.
+- **Formato da conta:** do jogo mais recente. `time_control` `"600"` vira `10+0`, `"180+2"` vira `3+2`. `time_class` `rapid` vira "Rápida", `blitz` fica "Blitz", `bullet` fica "Bullet".
+
+### Formatação
+
+- Rating sem separador de milhar, como no xadrez: `1531`.
+- Precisão com uma casa e vírgula: `93,4%`.
+- Contagens com separador: `1.234 partidas`.
+- Data: `9 nov` no ano corrente, `9 nov 2024` nos outros anos (date-fns com `ptBR`).
+- Sinal de menos é U+2212 (`−7`), não hífen.
+
+## 3. Rotas e estado
+
+- `/` redireciona para `/sleeprerun`.
+- `/[account]` é a lista. `account` aceita `sleeprerun` e `speedbemruim`. Outro valor dá `notFound()`.
+- `/[account]/jogo/[uuid]` é o detalhe. Acesso direto busca os jogos da conta no servidor e procura o `uuid`. Se não achar, `notFound()`. Navegação no cliente lê do cache do React Query.
+- Filtros na query string, com as mesmas chaves do código: `q`, `result` (`win|draw|loss`), `color` (`white|black`), `year`, `sort` (`newest|oldest|accuracy`), `page`, `size`. Valor padrão não aparece na URL.
+- A URL é a fonte da verdade. O store de filtros do zustand sai. A busca atualiza a URL com `router.replace` depois de 300 ms sem digitar.
+- `page` serve aos dois layouts. No mobile, "Carregar mais" incrementa `page` e a lista mostra os itens de `0` até `page × 25`. No desktop, `page` e `size` fatiam a tabela.
+- A página rola o documento. Nada de altura fixa com scroll interno, como nos frames de 390×844. Assim o Next restaura o scroll ao voltar do detalhe e a barra do iOS funciona.
+- Trocar de conta é navegar para `/[account]`, com o mesmo `loading.tsx` de skeleton.
+
+## 4. Telas
+
+### Header (todas as telas)
+
+```
+[ SleepRun | SpeedBemRuim ]        segmentado, 44px, raio 999
+Jogos do GM Krikor                 h1, 26px mobile / 36px desktop
+Rápida 10+0 no Chess.com           13px, muted
+```
+
+O seletor é um par de links para `/sleeprerun` e `/speedbemruim`, com `aria-current="page"` no ativo. A linha de formato substitui o "Blitz" que saiu dos cards.
+
+### Destaque (topo da lista)
+
+Substitui os quatro blocos de resumo do mobile e do desktop. Sem caixa em volta.
+
+```
+543                          pico 2524
+rating atual
+╱╲╱──╱╱╱    ╱╱╱╱╱──╱●                     sparkline, 64px de altura
++14 =0 −10              precisão 87,2%
+                        média de 15 jogos analisados
+```
+
+- **Rating atual:** rating do Krikor no jogo mais recente da conta. Ignora filtros. Space Grotesk 700, 44px mobile, 56px desktop.
+- **Sparkline:** rating de cada jogo dentro do filtro de ano, em ordem cronológica. Ignora resultado, cor e busca. Reduzir para o último jogo de cada dia. A linha quebra em cada início de run. Traço de 2px na cor de destaque, ponto no último valor, sem eixos. `role="img"` com `aria-label` calculado, por exemplo "Rating de 408 a 543 entre 1 e 11 de nov de 2026".
+- **Pico:** maior rating dentro do período do sparkline, 12px muted.
+- **Placar:** notação de xadrez, `+V =E −D`, Space Grotesk 20px. O número de vitórias usa a cor de vitória, o de derrotas a de derrota, o de empates a de empate. `aria-label="14 vitórias, 0 empates, 10 derrotas"`. Reflete todos os filtros.
+- **Precisão média:** média da precisão do Krikor nos jogos filtrados que têm análise. Abaixo, "média de N jogos analisados". Se nenhum tiver análise: "—" e "nenhum jogo analisado".
+- **Desktop:** a partir de 1024px, três colunas (`auto 1fr auto`, alinhadas na base, gap 32px), com o sparkline de 96px no meio. Entre 768 e 1023px, rating e placar na primeira linha e sparkline na segunda.
+
+### Barra de busca e filtros (mobile)
+
+- Busca por oponente ou abertura, com `<label>` real (pode ser `sr-only`). Fonte de 16px no input, para o iOS não dar zoom.
+- Botão de filtros é `<button aria-haspopup="dialog" aria-expanded>`. Com filtros ativos no sheet, mostra a contagem num badge e o `aria-label` vira "Filtros, 2 ativos".
+- Chips Todos / Vitórias / Empates / Derrotas com `aria-pressed`, aplicados na hora.
+- Linha de contagem: "24 jogos" (ou "1 jogo") à esquerda. À direita, `<select>` de ordenação com rótulo `sr-only` "Ordenar": Mais recentes, Mais antigos, Maior precisão.
+
+### Card da lista (mobile)
+
+```
+┌───────────────────────────────────────────┐
+│ ┌──┐  ■ vs oponente 1512            1531  │
+│ │V │  Queens Gambit Accepted Old…     +8  │
+│ └──┘  Precisão 93,4%, 9 nov               │
+└───────────────────────────────────────────┘
+```
+
+- O card inteiro é um `<a>` para o detalhe.
+- **Badge:** 44×44, raio 12, letra V/E/D sobre a cor do resultado. O nome do resultado vai em texto `sr-only` ("Vitória"). `aria-label` num `<span>` não é lido por leitor de tela.
+- **Linha 1** (15px, 600): quadrado da peça (10px, `aria-hidden`), "vs {oponente}" com reticências, rating do oponente em 12px muted.
+- **Linha 2** (13px, secundário): abertura com reticências.
+- **Linha 3** (12px, muted): "Precisão 93,4%, 9 nov". Sem análise, só a data.
+- **Coluna direita:** rating do Krikor (Space Grotesk 17px), e abaixo o delta em 12px 600. "+8" na cor de vitória, "−7" na de derrota, "±0" muted. Em início de run: "nova run", muted.
+- Saem do card: "Brancas" (o quadrado da peça já diz), "Blitz" (está no header) e o número de lances (está no detalhe e na tabela).
+- Ponteiro: borda passa para `--color-border-strong` em 150 ms. Toque: fundo `--color-surface-pressed`.
+- "Carregar mais" no fim da lista, botão secundário de 48px: "Carregar mais 25". Some quando acabar.
+
+### Sheet de filtros (mobile)
+
+- `<dialog>` nativo com `showModal()`. Isso dá trava de foco, Esc e fundo inerte. O foco volta para o botão de filtros ao fechar. O título é `<h2>Filtros</h2>`.
+- **Grupos:** Cor (Ambas, Brancas, Pretas) e Ano (Todos e os anos presentes nos dados). Saem Resultado (já está nos chips), Ritmo (um formato por conta), Período (substituído por Ano) e o select de aberturas (a busca cobre).
+- As escolhas ficam pendentes até o botão principal. Fechar pelo fundo ou pelo Esc descarta.
+- **"Limpar"** zera as escolhas pendentes.
+- **Botão principal:** "Mostrar 132 jogos", com a contagem ao vivo das escolhas pendentes. Com zero resultados, fica desabilitado com o texto "Nenhum jogo com esses filtros".
+- Padding inferior com `env(safe-area-inset-bottom)`.
+- Abre deslizando para cima em 240 ms (ease-out) e fecha em 180 ms. Com `prefers-reduced-motion`, sem deslize.
+
+### Detalhe
+
+```
+‹ Jogos                                   [compartilhar]
+┌───────────────────────────────────────────────────┐
+│ (Vitória)                                         │
+│ Krikor venceu de brancas por xeque-mate           │
+│ em 42 lances                                      │
+│ Rápida 10+0, 9 nov 2026                           │
+│ Rating 1531 (+8)                                  │
+└───────────────────────────────────────────────────┘
+Precisão
+■ GM Krikor                                   93,4%
+██████████████████████████████░░
+■ oponente 1512                               81,7%
+████████████████████████░░░░░░░░
+
+Abertura   Queens Gambit Accepted Old Variation
+           ECO D20
+Lances     42
+─────────────────────────────────────────────────────
+[        Abrir no Chess.com  ↗        ]   primário, 52px
+[            Copiar PGN               ]   secundário, 48px
+```
+
+- **Banner:** a cor depende do resultado (tokens na seção 6). Pílula com o resultado. O h1 segue o modelo "Krikor {venceu|perdeu|empatou} de {brancas|pretas} {término} em {N} lances".
+- **Término**, pelo código do lado que perdeu (ou de qualquer lado, no empate):
+
+  | Código | Texto |
+  |---|---|
+  | `checkmated` | por xeque-mate |
+  | `resigned` | por desistência |
+  | `timeout` | no tempo |
+  | `abandoned` | por abandono |
+  | `agreed` | por acordo |
+  | `repetition` | por repetição |
+  | `stalemate` | por afogamento |
+  | `insufficient` | por material insuficiente |
+  | `50move` | pela regra dos 50 lances |
+  | `timevsinsufficient` | no tempo, com material insuficiente |
+
+- **Linha de rating** no banner: "Rating 1531 (+8)". Em início de run: "Rating 543, início de run".
+- **Precisão:** h2 em sentence case. Duas barras, a do Krikor na cor de destaque. Sem análise, as barras dão lugar ao texto "O Chess.com não tem análise de precisão para este jogo."
+- **Abertura e lances:** um `<dl>` sem caixas, separado por linhas finas. Sai o bloco Ritmo, que já está no banner.
+- **Rodapé fixo** com `env(safe-area-inset-bottom)`.
+  - "Abrir no Chess.com" abre em nova aba. Leva um ícone SVG de link externo e o texto `sr-only` "(abre em nova aba)".
+  - "Copiar PGN" troca o rótulo para "PGN copiado" por 2 s e anuncia numa região `aria-live="polite"`.
+- **Compartilhar:** usa `navigator.share({ url })` quando existe. Senão copia o link e mostra "Link copiado" do mesmo jeito.
+
+### Desktop (≥ 768px)
+
+```
+Jogos do GM Krikor                          [ SleepRun | SpeedBemRuim ]
+1.234 partidas de rápida 10+0 da conta SleepReRun no Chess.com, desde abril de 2021.
+
+[ destaque: rating | sparkline | placar e precisão ]
+
+[ busca......................... ] (Todos)(Vitórias)(Empates)(Derrotas) [Cor] [Ano] [Ordenar]
+
+┌ tabela, overflow-x: auto, min-width 900px ────────────────────────────────────────┐
+│ Resultado  Oponente      Abertura         Rating   Precisão  Lances  Data   Ações │
+│ (Vitória)  ■ oponente 1512  Queens Gambit…  1531 +8   93,4%     42   9 nov  [↗ Chess.com] [PGN] │
+└───────────────────────────────────────────────────────────────────────────────────┘
+Mostrando 1–25 de 1.234          Linhas por página [25]       ‹ 1 2 3 … 50 ›
+```
+
+- **Container:** max-width 1200px, padding 32px 24px 48px.
+- **Header:** os botões "Site oficial" e "YouTube" do header saem. Esses links ficam no rodapé, e o lugar deles fica com o seletor de conta.
+- **Cabeçalhos da tabela:** sentence case, 13px, 600, muted. Colunas numéricas alinhadas à direita, com `tabular-nums`.
+- **Link para o detalhe:** o nome do oponente. A linha inteira muda de fundo no hover.
+- **Ações**, os dois botões ghost com 44px de altura:
+  - "Chess.com", com ícone de link externo e `aria-label="Abrir partida contra {oponente} no Chess.com"`.
+  - "PGN", com `aria-label="Copiar PGN da partida contra {oponente}"`. O retorno "PGN copiado" sai numa região `aria-live` única da página.
+- **Cor de destaque:** não aparece em botão de linha da tabela. Vinte e cinco botões dourados competem entre si.
+- **Paginação:** fica a numerada que já existe, com o seletor de linhas por página.
+
+### Carregando
+
+- `app/[account]/loading.tsx`.
+- **Texto real, sem skeleton:** o header (seletor e h1). O seletor funciona durante o carregamento.
+- **Skeleton:** blocos do destaque (retângulo de 44px para o rating e de 64px para o sparkline), busca, chips e seis cards.
+- `aria-busy="true"` na região da lista e `<p role="status">Carregando jogos…</p>`.
+- Sem shimmer. Um pulse lento é aceitável, desligado com `prefers-reduced-motion`.
+
+### Erro
+
+- **Quando aparece:** `isError` da query. "Tentar de novo" chama `refetch()` e fica "Tentando…" (desabilitado) enquanto roda.
+- **Header completo**, com o seletor, para dar para tentar a outra conta.
+- **Bloco `role="alert"`:**
+  - ícone
+  - h2 "O Chess.com não respondeu"
+  - texto "A lista de jogos vem da API pública do Chess.com. Tente de novo em alguns minutos."
+  - botão primário "Tentar de novo"
+  - link secundário "Ver jogos no Chess.com", para `https://www.chess.com/games/archive/{account}`
+- O rodapé é o mesmo das outras telas.
+
+### Vazio
+
+- **Filtros sem resultado:** "Nenhum jogo com esses filtros." e um botão secundário "Limpar filtros", que limpa a query string inteira.
+- **Conta sem partidas** (a API respondeu com lista vazia): "Essa conta ainda não tem partidas no Chess.com."
+
+### Rodapé (todas as telas)
+
+"Criado por [Rafael Siqueira](https://rafaelsiqueira.dev/) para a comunidade do GM Krikor Mekhitarian."
+
+Links separados por espaço, sem ponto médio, cada um com área de toque de 44px:
+- Site oficial: https://gmkrikor.com.br/
+- YouTube: https://www.youtube.com/@GMKrikor
+- GitHub: https://github.com/refeals/gm-krikor-sleeprun-data
+
+## 5. Acessibilidade e interação
+
+Contraste calculado para todos os pares abaixo. O menor texto é o placeholder, com 5,35:1 sobre a superfície.
+
+- `:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px }` em tudo que é focável. O label da busca usa `:focus-within` com o mesmo anel, porque o input tem `outline: none`.
+- Alvos de toque de 44px no mínimo, inclusive os botões da tabela desktop (o design tinha 36px).
+- Nenhum texto abaixo de 12px. O design tinha 11px nos rótulos do resumo e no "precisão" do card.
+- `color-scheme: dark`. Exportar `viewport` com `viewport-fit=cover` e `themeColor: #0E1411`.
+- Resultado nunca só por cor: letra no badge, palavra na pílula, sinal no delta.
+- Movimento só em resposta a ação: sheet, retorno de cópia, toque em chip (120 ms). Sem animação de entrada. `prefers-reduced-motion` respeitado.
+- Ícones SVG com traço (lucide-react já está instalado), `aria-hidden` quando há texto ao lado e `aria-label` no botão quando o ícone está sozinho.
+
+## 6. Tokens revisados
+
+### Cores
+
+Os neutros foram puxados para o verde de tabuleiro, que continua a identidade do site atual (`bg-green-950`). O destaque dourado e as cores de resultado ficam.
+
+| Custom property | Valor | Uso |
+|---|---|---|
+| `--color-bg` | `#0E1411` | fundo da página |
+| `--color-surface` | `#161D19` | cards, inputs, sheet |
+| `--color-surface-pressed` | `#1A221D` | card pressionado, linha da tabela em hover |
+| `--color-border` | `#25302A` | borda de card e input, trilho das barras |
+| `--color-border-subtle` | `#1F2823` | divisórias da tabela e do `<dl>` |
+| `--color-border-strong` | `#2E3A33` | hover de card, borda do sheet |
+| `--color-text` | `#ECEEEC` | texto principal |
+| `--color-text-secondary` | `#C3CAC5` | abertura, texto de apoio |
+| `--color-text-muted` | `#A1AAA4` | meta, rótulos |
+| `--color-placeholder` | `#89928C` | placeholder |
+| `--color-disabled` | `#6E7871` | texto desabilitado, borda do quadrado da peça |
+| `--color-accent` | `#E8C468` | botão primário, chip ativo, barra e sparkline do Krikor, foco |
+| `--color-accent-hover` | `#F3D98F` | hover do destaque |
+| `--color-on-accent` | `#0E1411` | texto sobre destaque e sobre cores de resultado |
+| `--color-win` | `#6EDB9A` | vitória |
+| `--color-loss` | `#FF9B7A` | derrota |
+| `--color-draw` | `#AEB5B0` | empate |
+| `--color-opponent-bar` | `#7D8880` | barra de precisão do oponente |
+| `--color-banner-win-bg` / `-border` | `#15291D` / `#2A5238` | banner de vitória |
+| `--color-banner-loss-bg` / `-border` | `#2A1A16` / `#5A3328` | banner de derrota |
+| `--color-banner-draw-bg` / `-border` | `#161D19` / `#2E3A33` | banner de empate |
+| `--color-piece-white` | `#F5F5F4` | quadrado de peça branca |
+
+Contraste medido (WCAG): texto 14,71:1 na superfície, secundário 10,27:1, muted 7,19:1, placeholder 5,35:1, vitória 10,02:1, derrota 8,35:1, empate 8,20:1, texto escuro sobre destaque 11,12:1. Não-texto: barra do oponente 3,72:1 sobre o trilho, borda do quadrado da peça 3,75:1 sobre a superfície.
+
+Nenhuma cor fora desta tabela. As cores soltas do design (`#B4BAC4`, `#7C8494`, `#3A404B`, `#20242C`, `#222630`, `#07080A`) foram absorvidas por estes tokens. Os tokens do shadcn que sobrarem sem uso saem do `globals.css` e do `tailwind.config.ts`.
+
+### Tipografia
+
+- Space Grotesk 600–700 em títulos e números. Inter 400–700 no texto. As duas via `next/font/google`, no lugar da Roboto.
+- `font-variant-numeric: tabular-nums` em todo número (rating, delta, precisão, contagens, placar, datas na tabela).
+- Escala:
+  - h1: 26px no mobile, 36px no desktop
+  - rating do destaque: 44px / 56px
+  - placar: 20px
+  - corpo: 15px
+  - meta: 12–13px
+- Rótulos em sentence case, 13px, peso 600, cor muted. Nada de caixa alta com letter-spacing.
+
+### Forma e espaçamento
+
+- Raios: 999px em chips, pílulas e seletor de conta; 14px em cards, botões grandes e banner; 12px em inputs, botões e badge; 24px no topo do sheet. Nenhum outro valor (o design tinha 10, 16, 18 e 20).
+- Caixa com borda só em elemento clicável (card da lista, input, botão). Destaque, seção de precisão e dados do detalhe ficam sem caixa. O banner de resultado é a exceção, porque a cor dele é o resultado.
+- Gutter mobile de 16px, gap de 8px entre cards, 16–24px entre seções.
+
+## 7. Textos
+
+Vocabulário único: a ação que se chama "Copiar PGN" confirma com "PGN copiado"; o botão "Limpar filtros" faz o mesmo que "Limpar" no sheet.
+
+| Lugar | Texto |
+|---|---|
+| Título da aba | Jogos do GM Krikor no SleepRun |
+| h1 | Jogos do GM Krikor |
+| Formato | Rápida 10+0 no Chess.com / Blitz 3+0 no Chess.com |
+| Subtítulo desktop | {N} partidas de {formato} da conta {usuário} no Chess.com, desde {mês} de {ano}. |
+| Destaque | rating atual · pico {N} · precisão média · média de {N} jogos analisados · nenhum jogo analisado |
+| Busca (label) | Buscar por oponente ou abertura |
+| Busca (placeholder) | Oponente ou abertura |
+| Chips | Todos · Vitórias · Empates · Derrotas |
+| Contagem | 1 jogo / {N} jogos |
+| Ordenar | Mais recentes · Mais antigos · Maior precisão |
+| Botão de filtros | Filtros / Filtros, {N} ativos |
+| Sheet | Filtros · Limpar · Cor · Ambas · Brancas · Pretas · Ano · Todos · Mostrar {N} jogos |
+| Card | vs {oponente} · Precisão {N}% · nova run |
+| Lista | Carregar mais 25 |
+| Detalhe | Jogos · Compartilhar · Precisão · Abertura · Lances · Abrir no Chess.com · Copiar PGN |
+| Retornos | PGN copiado · Link copiado |
+| Sem análise | O Chess.com não tem análise de precisão para este jogo. |
+| Carregando | Carregando jogos… |
+| Erro | O Chess.com não respondeu · A lista de jogos vem da API pública do Chess.com. Tente de novo em alguns minutos. · Tentar de novo · Ver jogos no Chess.com |
+| Vazio | Nenhum jogo com esses filtros. · Limpar filtros · Essa conta ainda não tem partidas no Chess.com. |
+
+Os pontos médios desta tabela só separam itens da tabela. Na interface, cada texto é um elemento separado.
+
+## 8. Mudanças fora da interface
+
+O `HANDOFF.md` diz que só a interface muda. Sem os itens abaixo, as telas de erro, de carregamento e de detalhe não funcionam:
+
+1. **`getGames` tem que lançar erro.** Hoje ele captura e devolve `[]`, e a tela de erro nunca aparece. Checar `res.ok` na lista de arquivos e em cada mês.
+2. **Chave da query igual nos dois lados.** `page.tsx` faz prefetch em `["games"]` e o hook lê `["games", account]`. O prefetch do servidor é descartado e o cliente sempre busca de novo. Usar `["games", account]` nos dois lados.
+3. **Cache dos meses.** Cada carregamento busca todos os meses (67 na SleepReRun). Meses passados não mudam e podem usar `cache: "force-cache"`. O mês corrente e a lista de arquivos usam `next: { revalidate: 300 }`. `fetch` dentro de Server Action não entra no Data Cache (conferir na doc do Next 15). Por isso a busca sai do arquivo `"use server"` e vai para um módulo só de servidor, usado pela página. Para o `refetch` do cliente, um Route Handler `GET /api/games/[account]`.
+4. **Número de lances pelo PGN**, porque o FEN costuma vir sem contador (seção 2).
+
+## 9. Ordem sugerida
+
+1. Camada de dados: itens da seção 8 e o `GameView`.
+2. Tokens, fontes e limpeza do shadcn.
+3. Rotas e estado na URL.
+4. Lista mobile: header, busca, chips, cards, "Carregar mais".
+5. Destaque com sparkline.
+6. Sheet de filtros.
+7. Detalhe.
+8. Desktop.
+9. Carregando, erro e vazio.
+10. Passada de acessibilidade: teclado, leitor de tela, 390px e 1440px.

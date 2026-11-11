@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>SleepRun — Jogos</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0F1115}
+a{color:#E8C468}a:hover{color:#F3D98F}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+input::placeholder{color:#8A909B}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #0F1115; color: #ECEDEF; font-family: Inter, system-ui, sans-serif; overflow: hidden">
+
+<header style="display: flex; align-items: center; justify-content: space-between; padding: 16px 16px 8px 16px">
+<div style="display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #A3A9B4">SleepRun</span>
+<h1 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 26px; font-weight: 700; line-height: 1.1">Jogos do GM Krikor</h1>
+</div>
+<button aria-label="Menu" style="width: 44px; height: 44px; border-radius: 12px; border: 1px solid #262A33; background: #181B22; color: #ECEDEF; display: flex; align-items: center; justify-content: center; cursor: pointer">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"></path></svg>
+</button>
+</header>
+
+<div style="display: flex; gap: 8px; padding: 8px 16px">
+<label style="flex: 1; height: 48px; display: flex; align-items: center; gap: 8px; padding: 0 14px; border-radius: 12px; background: #181B22; border: 1px solid #262A33">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#A3A9B4" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+<span class="sr-only">Buscar por oponente ou abertura</span>
+<input type="search" placeholder="Oponente ou abertura" value="{{q}}" onInput="{{onSearch}}" style="flex: 1; min-width: 0; border: 0; outline: none; background: transparent; color: #ECEDEF; font-size: 16px; font-family: inherit">
+</label>
+<a href="Filtros.dc.html" aria-label="Filtros" style="width: 48px; height: 48px; border-radius: 12px; background: #181B22; border: 1px solid #262A33; color: #ECEDEF; display: flex; align-items: center; justify-content: center; position: relative">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"></path></svg>
+</a>
+</div>
+
+<div role="group" aria-label="Filtrar por resultado" style="display: flex; gap: 8px; padding: 4px 16px 8px 16px; overflow-x: auto">
+<sc-for list="{{chips}}" as="chip" hint-placeholder-count="4">
+<button aria-pressed="{{chip.pressed}}" onClick="{{chip.pick}}" style="{{chip.style}}">{{chip.label}}</button>
+</sc-for>
+</div>
+
+<section aria-label="Resumo" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 4px 16px 8px 16px; padding: 12px; border-radius: 14px; background: #181B22; border: 1px solid #262A33">
+<div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 11px; color: #A3A9B4">Jogos</span><span style="font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 700">{{total}}</span></div>
+<div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 11px; color: #A3A9B4">Vitórias</span><span style="font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 700; color: #6EDB9A">{{wins}}</span></div>
+<div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 11px; color: #A3A9B4">Derrotas</span><span style="font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 700; color: #FF9B7A">{{losses}}</span></div>
+<div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 11px; color: #A3A9B4">Precisão</span><span style="font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 700">{{avg}}</span></div>
+</section>
+
+<div style="display: flex; align-items: center; justify-content: space-between; padding: 4px 16px">
+<span style="font-size: 13px; color: #A3A9B4">{{countLabel}}</span>
+<button style="height: 44px; padding: 0 4px; border: 0; background: transparent; color: #ECEDEF; font-size: 13px; font-weight: 600; font-family: inherit; display: flex; align-items: center; gap: 4px; cursor: pointer">Mais recentes
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button>
+</div>
+
+<ul style="list-style: none; margin: 0; padding: 0 16px 24px 16px; display: flex; flex-direction: column; gap: 8px; flex: 1; overflow-y: auto">
+<sc-for list="{{games}}" as="g" hint-placeholder-count="5">
+<li>
+<a href="Detalhe.dc.html" style="display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 14px; background: #181B22; border: 1px solid #262A33; color: #ECEDEF; text-decoration: none">
+<span aria-label="{{g.resultLabel}}" style="{{g.badgeStyle}}">{{g.letter}}</span>
+<span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px">
+<span style="display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 600">
+<span aria-hidden="true" style="{{g.pieceStyle}}"></span>
+<span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap">vs {{g.opp}}</span>
+<span style="font-size: 12px; font-weight: 500; color: #A3A9B4">{{g.rating}}</span>
+</span>
+<span style="font-size: 13px; color: #C4C9D1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{g.opening}}</span>
+<span style="font-size: 12px; color: #A3A9B4">{{g.meta}}</span>
+</span>
+<span style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px">
+<span style="font-family: 'Space Grotesk', sans-serif; font-size: 17px; font-weight: 700">{{g.acc}}</span>
+<span style="font-size: 11px; color: #A3A9B4">precisão</span>
+</span>
+</a>
+</li>
+</sc-for>
+<sc-if value="{{empty}}" hint-placeholder-val="{{ false }}">
+<li style="padding: 32px 16px; text-align: center; color: #A3A9B4; font-size: 14px">Nenhum jogo com esses filtros.</li>
+</sc-if>
+</ul>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#E8C468","options":["#E8C468","#7CC4FF","#6EDB9A"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { filter: 'all', q: '' };
+  }
+  renderVals() {
+    const accent = this.props.accent ?? '#E8C468';
+    const data = [
+      { opp: 'oponente_exemplo1', rating: '2614', opening: 'Defesa Siciliana, Najdorf', rhythm: 'Blitz', moves: 42, date: '9 nov', r: 'V', acc: 93.4, white: true },
+      { opp: 'oponente_exemplo2', rating: '2702', opening: 'Gambito da Dama Recusado', rhythm: 'Blitz', moves: 58, date: '9 nov', r: 'E', acc: 90.1, white: false },
+      { opp: 'oponente_exemplo3', rating: '2588', opening: 'Abertura Inglesa', rhythm: 'Bullet', moves: 37, date: '8 nov', r: 'V', acc: 88.7, white: true },
+      { opp: 'oponente_exemplo4', rating: '2731', opening: 'Defesa Caro-Kann, Avanço', rhythm: 'Rápida', moves: 64, date: '7 nov', r: 'D', acc: 84.2, white: false },
+      { opp: 'oponente_exemplo5', rating: '2655', opening: 'Ruy López, Defesa Berlim', rhythm: 'Blitz', moves: 49, date: '6 nov', r: 'V', acc: 95.0, white: true },
+      { opp: 'oponente_exemplo6', rating: '2570', opening: 'Defesa Índia do Rei', rhythm: 'Bullet', moves: 31, date: '6 nov', r: 'V', acc: 86.9, white: false }
+    ];
+    const map = { V: { label: 'Vitória', fg: '#0F1115', bg: '#6EDB9A' }, D: { label: 'Derrota', fg: '#0F1115', bg: '#FF9B7A' }, E: { label: 'Empate', fg: '#0F1115', bg: '#A9B0BC' } };
+    const f = this.state.filter;
+    const q = (this.state.q || '').toLowerCase();
+    const list = data.filter((g) => (f === 'all' || g.r === f) && (!q || g.opp.toLowerCase().includes(q) || g.opening.toLowerCase().includes(q)));
+    const fmt = (n) => n.toFixed(1).replace('.', ',') + '%';
+    const games = list.map((g) => ({
+      ...g,
+      letter: g.r,
+      resultLabel: map[g.r].label,
+      acc: fmt(g.acc),
+      meta: (g.white ? 'Brancas' : 'Pretas') + ' · ' + g.rhythm + ' · ' + g.moves + ' lances · ' + g.date,
+      badgeStyle: 'width: 44px; height: 44px; flex: none; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-family: Space Grotesk, sans-serif; font-weight: 700; font-size: 17px; color: ' + map[g.r].fg + '; background: ' + map[g.r].bg,
+      pieceStyle: 'width: 10px; height: 10px; flex: none; border-radius: 3px; border: 1px solid #6B7280; background: ' + (g.white ? '#F5F5F4' : '#0F1115')
+    }));
+    const chipDefs = [['all', 'Todos'], ['V', 'Vitórias'], ['E', 'Empates'], ['D', 'Derrotas']];
+    const chips = chipDefs.map(([id, label]) => {
+      const on = f === id;
+      return {
+        label,
+        pressed: on ? 'true' : 'false',
+        pick: () => this.setState({ filter: id }),
+        style: 'height: 44px; padding: 0 16px; flex: none; border-radius: 999px; font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; border: 1px solid ' + (on ? accent : '#262A33') + '; background: ' + (on ? accent : '#181B22') + '; color: ' + (on ? '#0F1115' : '#ECEDEF')
+      };
+    });
+    const avg = list.length ? fmt(list.reduce((s, g) => s + g.acc, 0) / list.length) : '—';
+    return {
+      q: this.state.q,
+      onSearch: (e) => this.setState({ q: e.target.value }),
+      chips,
+      games,
+      empty: list.length === 0,
+      total: list.length,
+      wins: list.filter((g) => g.r === 'V').length,
+      losses: list.filter((g) => g.r === 'D').length,
+      avg,
+      countLabel: list.length + (list.length === 1 ? ' jogo' : ' jogos')
+    };
+  }
+}
+</script>
+</body>
+</html>
