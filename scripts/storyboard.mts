@@ -6,8 +6,8 @@ import jpeg from "jpeg-js"
 
 import { readOccupancy, type BoardFrame } from "./board-reading.mts"
 
-/** Smaller thumbnails, as in videos before 2023, are too blurry to read the board. */
-const MIN_FRAME_WIDTH = 320
+/** Videos before 2023 have 160×90 thumbnails at most; smaller ones are too blurry. */
+const MIN_FRAME_WIDTH = 160
 
 const HEADERS = {
   // A full browser user agent gets WebP sheets, which jpeg-js can't read.

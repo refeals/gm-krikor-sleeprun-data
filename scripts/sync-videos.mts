@@ -4,7 +4,7 @@
 //
 //   pnpm sync:videos                       summary per season
 //   pnpm sync:videos --details             also lists unsure episodes and timestamps
-//   pnpm sync:videos --refresh-timestamps  reads every recent episode's storyboard again
+//   pnpm sync:videos --refresh-timestamps  reads every episode's storyboard again
 //
 // Needs a YouTube Data API v3 key in .env or .env.local as YOUTUBE_API_KEY. A wrong
 // match is fixed in data/game-video-overrides.json, which maps a game UUID to
@@ -56,9 +56,6 @@ const TITLE_FIXES: Record<string, { season: number; episode: number | null } | n
 /** Below this margin, another episode fit a game almost as well. */
 const CONFIDENT_MARGIN = 2
 
-// Seasons whose storyboards are sharp enough to find where each game starts
-// (scripts/storyboard.mts). Later seasons are included as they come.
-const TIMESTAMP_FROM_SEASON: Record<AccountId, number> = { sleeprerun: 8, speedbemruim: 7 }
 /** Games on each side of an episode's own, checked too, to report a misplaced game. */
 const NEIGHBOR_GAMES = 3
 
@@ -448,17 +445,15 @@ for (const account of ACCOUNTS) {
         `titles agree ${titles.agreeing}/${titles.checked} without using them`,
     )
 
-    const readsTimestamps = season >= TIMESTAMP_FROM_SEASON[account.id]
     let gamesTimed = 0
     let gamesLinked = 0
     for (const [index, video] of seasonVideos.entries()) {
       const match = matches[index]
       const shown = match.games ? games.slice(match.games.first, match.games.end) : []
       const code = formatEpisodeCode(season, video.episode)
-      const startSeconds =
-        readsTimestamps && match.games
-          ? await findStartSeconds(code, video.videoId, games, match.games, previousEpisodes.get(video.videoId))
-          : undefined
+      const startSeconds = match.games
+        ? await findStartSeconds(code, video.videoId, games, match.games, previousEpisodes.get(video.videoId))
+        : undefined
       // A game seen in the video is in the episode, whatever the split said.
       const isSure = (game: SyncGame, position: number) =>
         match.gameMargins[position] >= CONFIDENT_MARGIN || typeof startSeconds?.[game.uuid] === "number"
@@ -479,7 +474,7 @@ for (const account of ACCOUNTS) {
         ...(startSeconds ? { startSeconds } : {}),
       })
     }
-    if (readsTimestamps) console.log(`        timestamps for ${gamesTimed} of ${gamesLinked} linked games`)
+    console.log(`        timestamps for ${gamesTimed} of ${gamesLinked} linked games`)
   }
   output[account.id] = entries
 }

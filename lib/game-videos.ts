@@ -5,7 +5,7 @@ import type { AccountId } from "@/lib/accounts"
 import { formatEpisodeCode } from "@/lib/youtube"
 import type { GameVideo, GameVideosFile, VideoEpisode } from "@/types/game-videos"
 
-// Written by scripts/sync-videos.mts. Server only: it is about 450 KB, and
+// Written by scripts/sync-videos.mts. Server only: it is about 600 KB, and
 // each game sends the client just its own episode.
 const gameVideos = gameVideosJson as GameVideosFile
 

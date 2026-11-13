@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       refresh_timestamps:
-        description: Read every recent episode's thumbnails again
+        description: Read every episode's thumbnails again
         type: boolean
         default: false
 
