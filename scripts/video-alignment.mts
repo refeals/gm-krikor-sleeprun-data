@@ -229,14 +229,13 @@ function solve(
 
   /**
    * Cost of leaving the games from `from` on out of every episode. While a
-   * season is being published, later sittings may be in episodes not out
-   * yet, so only the rest of the last episode's sitting costs.
+   * season is being published, any of them may be in an episode not out yet,
+   * even the rest of the last episode's sitting: a 90-minute blitz sitting
+   * fills three episodes. The video's length decides where the last one ends,
+   * and the games at that edge stay uncertain until the next one comes out.
    */
   function tailCost(from: number): number {
-    if (!isOngoing) return skipPrefix[gameCount] - skipPrefix[from]
-    let end = from
-    while (end > 0 && end < gameCount && games[end].startedAt - games[end - 1].endedAt < SITTING_BREAK) end++
-    return skipPrefix[end] - skipPrefix[from]
+    return isOngoing ? 0 : skipPrefix[gameCount] - skipPrefix[from]
   }
 
   // Forward pass. best[e][p]: lowest cost of episodes [0, e) using exactly
