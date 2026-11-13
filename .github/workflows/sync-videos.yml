@@ -1,14 +1,16 @@
 name: Sync YouTube episodes
 
-# Episodes come out around 15:00 UTC. This links the games of any new one and
-# commits data/game-videos.json; Vercel redeploys on the push.
+# Links the games of any new episode and commits data/game-videos.json;
+# Vercel redeploys on the push. Nothing is committed when nothing changed.
 on:
   schedule:
-    - cron: "30 15 * * *"
+    # 14:00 in Brasília (UTC-3). Episodes come out around lunchtime.
+    - cron: "0 17 * * *"
   workflow_dispatch:
 
+# The push goes through SYNC_TOKEN below, so the built-in token only reads.
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: sync-videos
@@ -18,10 +20,15 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      # main is protected, and the workflow's own token can't push to it.
+      # SYNC_TOKEN is the owner's fine-grained token (Contents: read and
+      # write on this repository), which may.
+      - uses: actions/checkout@v5
+        with:
+          token: ${{ secrets.SYNC_TOKEN }}
 
       # The script imports only Node built-ins and local files: no install.
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 24
 
