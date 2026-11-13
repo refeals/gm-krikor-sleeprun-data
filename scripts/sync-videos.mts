@@ -345,16 +345,21 @@ async function readPreviousEpisodes(): Promise<Map<string, VideoEpisode>> {
   }
 }
 
-function hasSameGames(episode: VideoEpisode, games: readonly SyncGame[]): boolean {
-  const previous = new Set([...episode.gameUuids, ...episode.uncertainGameUuids])
-  return previous.size === games.length && games.every((game) => previous.has(game.uuid))
+type StartSeconds = NonNullable<VideoEpisode["startSeconds"]>
+
+/** The earlier result for the games still in the episode, or undefined when there is none. */
+function keepEarlier(earlier: StartSeconds | undefined, shown: readonly SyncGame[]): StartSeconds | undefined {
+  if (!earlier) return undefined
+  const kept = shown.filter((game) => game.uuid in earlier).map((game) => [game.uuid, earlier[game.uuid]])
+  return kept.length ? Object.fromEntries(kept) : undefined
 }
 
 /**
- * Seconds into the episode where each of its games starts, for the games its
- * storyboard shows. Reuses the last run's result while the episode keeps the
- * same games. Undefined when the storyboard can't be read: the next run
- * tries again, and the links open the video from the start meanwhile.
+ * Seconds into the episode where each of its games starts, read from its
+ * storyboard: null for a game the video doesn't show. Reuses the last run's
+ * result while it covers every game of the episode. When the storyboard
+ * can't be read, keeps whatever was read before and tries again next run;
+ * the games without a time open the video from the start meanwhile.
  */
 async function findStartSeconds(
   code: string,
@@ -362,10 +367,11 @@ async function findStartSeconds(
   games: readonly SyncGame[],
   block: { first: number; end: number },
   previous: VideoEpisode | undefined,
-): Promise<Record<string, number> | undefined> {
+): Promise<StartSeconds | undefined> {
   const shown = games.slice(block.first, block.end)
-  if (!refreshTimestamps && previous?.startSeconds && hasSameGames(previous, shown)) {
-    return previous.startSeconds
+  const earlier = previous?.startSeconds
+  if (!refreshTimestamps && earlier && shown.every((game) => game.uuid in earlier)) {
+    return keepEarlier(earlier, shown)
   }
 
   let frames
@@ -373,7 +379,7 @@ async function findStartSeconds(
     frames = await readStoryboard(videoId)
   } catch (error) {
     console.warn(`    ${code}: no timestamps, ${error instanceof Error ? error.message : error}`)
-    return undefined
+    return keepEarlier(earlier, shown)
   }
   const candidates: CandidateGame[] = games
     .slice(Math.max(0, block.first - NEIGHBOR_GAMES), block.end + NEIGHBOR_GAMES)
@@ -401,7 +407,7 @@ async function findStartSeconds(
   if (strays.length) {
     console.warn(`    ${code}: in the video but not in the episode: ${strays.map((game) => game.opponent).join(", ")}`)
   }
-  return Object.fromEntries(shown.flatMap((game) => (starts.has(game.uuid) ? [[game.uuid, starts.get(game.uuid)!]] : [])))
+  return Object.fromEntries(shown.map((game) => [game.uuid, starts.get(game.uuid) ?? null]))
 }
 
 // Main ------------------------------------------------------------------------
@@ -455,13 +461,13 @@ for (const account of ACCOUNTS) {
           : undefined
       // A game seen in the video is in the episode, whatever the split said.
       const isSure = (game: SyncGame, position: number) =>
-        match.gameMargins[position] >= CONFIDENT_MARGIN || startSeconds?.[game.uuid] !== undefined
+        match.gameMargins[position] >= CONFIDENT_MARGIN || typeof startSeconds?.[game.uuid] === "number"
       if (showDetails && !shown.every(isSure)) {
         const marks = shown.map((game, position) => `${formatDate(game.startedAt)}${isSure(game, position) ? "" : "?"}`)
         console.log(`    ${code}  ${marks.join(", ") || "no games"}  "${video.title}"`)
       }
       gamesLinked += shown.length
-      gamesTimed += startSeconds ? Object.keys(startSeconds).length : 0
+      gamesTimed += Object.values(startSeconds ?? {}).filter((seconds) => seconds !== null).length
       entries.push({
         videoId: video.videoId,
         title: video.title,

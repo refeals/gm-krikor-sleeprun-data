@@ -18,9 +18,10 @@ export type VideoEpisode = {
   uncertainGameUuids: string[]
   /**
    * Second of the video where each game starts, by game UUID, read from the
-   * video's thumbnails. Only in recent seasons, for the games found there.
+   * video's thumbnails: null when the video doesn't show the game. Only in
+   * recent seasons. A game without an entry hasn't been looked for yet.
    */
-  startSeconds?: Record<string, number>
+  startSeconds?: Record<string, number | null>
 }
 
 /** Each account's episodes, oldest first. */
