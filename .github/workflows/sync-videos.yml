@@ -7,6 +7,11 @@ on:
     # 14:00 in Brasília (UTC-3). Episodes come out around lunchtime.
     - cron: "0 17 * * *"
   workflow_dispatch:
+    inputs:
+      refresh_timestamps:
+        description: Read every recent episode's thumbnails again
+        type: boolean
+        default: false
 
 # The push goes through SYNC_TOKEN below, so the built-in token only reads.
 permissions:
@@ -38,7 +43,7 @@ jobs:
           pnpm install --frozen-lockfile
 
       - name: Link games to episodes
-        run: pnpm --silent sync:videos
+        run: pnpm --silent sync:videos ${{ inputs.refresh_timestamps && '--refresh-timestamps' || '' }}
         env:
           YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
 
