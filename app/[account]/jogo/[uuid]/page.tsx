@@ -16,7 +16,7 @@ import { findGameVideo, findGameVideoTitle } from "@/lib/game-videos"
 import { findGameView, isGameUuid, type GameResult, type GameView } from "@/lib/game-view"
 import { requireAccount } from "@/lib/route-params"
 import { cn } from "@/lib/utils"
-import { getYouTubeVideoUrl } from "@/lib/youtube"
+import { formatVideoTime, getYouTubeVideoUrl } from "@/lib/youtube"
 
 // No game page is built ahead of time. Each one renders on its first visit
 // and is then cached; an empty list is what enables that (ISR).
@@ -123,6 +123,7 @@ export default async function GamePage({ params }: PageProps<"/[account]/jogo/[u
               <span className="text-base font-semibold">{videoTitle}</span>
               <span className="text-xs text-text-muted">
                 {account.seriesName} {game.video.code}
+                {game.video.startSeconds === null ? null : `, a partir de ${formatVideoTime(game.video.startSeconds)}`}
                 {/* Matched from dates and video lengths; see scripts/sync-videos.mts. */}
                 {game.video.isCertain ? null : ", provavelmente neste episódio"}
               </span>
@@ -133,7 +134,7 @@ export default async function GamePage({ params }: PageProps<"/[account]/jogo/[u
 
       <GameActions
         url={game.url}
-        videoUrl={game.video ? getYouTubeVideoUrl(game.video.videoId) : null}
+        videoUrl={game.video ? getYouTubeVideoUrl(game.video.videoId, game.video.startSeconds) : null}
         pgn={pgn}
       />
     </main>

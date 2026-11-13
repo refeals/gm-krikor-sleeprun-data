@@ -2,8 +2,9 @@
 // data/game-videos.json, which the app reads. Run it after new episodes come
 // out and commit the result:
 //
-//   pnpm sync:videos            summary per season
-//   pnpm sync:videos --details  also lists the episodes it is unsure about
+//   pnpm sync:videos                       summary per season
+//   pnpm sync:videos --details             also lists unsure episodes and timestamps
+//   pnpm sync:videos --refresh-timestamps  reads every recent episode's storyboard again
 //
 // Needs a YouTube Data API v3 key in .env or .env.local as YOUTUBE_API_KEY. A wrong
 // match is fixed in data/game-video-overrides.json, which maps a game UUID to
@@ -14,8 +15,10 @@ import { readFile, writeFile } from "node:fs/promises"
 import { ACCOUNTS, type AccountId } from "../lib/accounts.ts"
 import { countMoves, readPgnHeader } from "../lib/pgn.ts"
 import { isRunReset } from "../lib/rating-runs.ts"
-import { formatEpisodeCode } from "../lib/youtube.ts"
+import { formatEpisodeCode, formatVideoTime } from "../lib/youtube.ts"
 import type { GameVideosFile, VideoEpisode } from "../types/game-videos.ts"
+import { findGameStarts, replayOccupancy, type CandidateGame } from "./board-reading.mts"
+import { readStoryboard } from "./storyboard.mts"
 import {
   alignSeason,
   matchesTitle,
@@ -53,12 +56,20 @@ const TITLE_FIXES: Record<string, { season: number; episode: number | null } | n
 /** Below this margin, another episode fit a game almost as well. */
 const CONFIDENT_MARGIN = 2
 
+// Seasons whose storyboards are sharp enough to find where each game starts
+// (scripts/storyboard.mts). Later seasons are included as they come.
+const TIMESTAMP_FROM_SEASON: Record<AccountId, number> = { sleeprerun: 8, speedbemruim: 7 }
+/** Games on each side of an episode's own, checked too, to report a misplaced game. */
+const NEIGHBOR_GAMES = 3
+
 const showDetails = process.argv.includes("--details")
+const refreshTimestamps = process.argv.includes("--refresh-timestamps")
 
 // YouTube ---------------------------------------------------------------------
 
 type PlaylistItemsResponse = {
   nextPageToken?: string
+  pageInfo: { totalResults: number }
   items: {
     snippet: { title: string }
     contentDetails: { videoId: string; videoPublishedAt?: string }
@@ -132,42 +143,65 @@ function readEpisodeCode(videoId: string, title: string) {
   return code ? { season: Number(code[1]), episode: Number(code[2]) } : undefined
 }
 
-/** Public episodes of every series, oldest first. */
-async function fetchSeriesVideos(): Promise<Record<AccountId, SeriesVideo[]>> {
+type PlaylistItem = PlaylistItemsResponse["items"][number]
+
+const UPLOAD_LISTING_ATTEMPTS = 3
+
+/**
+ * Every upload of the channel. Paging through a playlist this long sometimes
+ * skips a page, which would drop a few dozen episodes from the file, so the
+ * count is checked against the total YouTube reports.
+ */
+async function fetchUploads(): Promise<PlaylistItem[]> {
   // A channel's uploads playlist id is its channel id with "UU" for "UC".
   const playlistId = `UU${CHANNEL_ID.slice(2)}`
+  for (let attempt = 1; ; attempt++) {
+    const items = new Map<string, PlaylistItem>()
+    let total = 0
+    let pageToken: string | undefined
+    do {
+      const page = await getYouTube<PlaylistItemsResponse>("playlistItems", {
+        part: "snippet,contentDetails",
+        playlistId,
+        maxResults: "50",
+        ...(pageToken ? { pageToken } : {}),
+      })
+      total = Math.max(total, page.pageInfo.totalResults)
+      for (const item of page.items) items.set(item.contentDetails.videoId, item)
+      pageToken = page.nextPageToken
+    } while (pageToken)
+
+    if (items.size >= total) return [...items.values()]
+    const shortfall = `YouTube listed ${items.size} of ${total} uploads`
+    if (attempt === UPLOAD_LISTING_ATTEMPTS) throw new Error(`${shortfall}, ${attempt} times. Try again later.`)
+    console.warn(`${shortfall}, listing again`)
+  }
+}
+
+/** Public episodes of every series, oldest first. */
+async function fetchSeriesVideos(): Promise<Record<AccountId, SeriesVideo[]>> {
   const found: (Omit<SeriesVideo, "durationSeconds"> & { accountId: AccountId })[] = []
   const unknown: string[] = []
 
-  let pageToken: string | undefined
-  do {
-    const page = await getYouTube<PlaylistItemsResponse>("playlistItems", {
-      part: "snippet,contentDetails",
-      playlistId,
-      maxResults: "50",
-      ...(pageToken ? { pageToken } : {}),
-    })
-    for (const { snippet, contentDetails } of page.items) {
-      // Private and deleted videos have no publish date.
-      if (!contentDetails.videoPublishedAt) continue
-      const series = findSeries(snippet.title)
-      if (!series) continue
-      const code = readEpisodeCode(contentDetails.videoId, snippet.title)
-      if (code === null) continue
-      if (code === undefined) {
-        unknown.push(`${contentDetails.videoId}  ${snippet.title}`)
-        continue
-      }
-      found.push({
-        accountId: series.accountId,
-        videoId: contentDetails.videoId,
-        title: stripSeriesSuffix(snippet.title, series.at),
-        ...code,
-        publishedAt: Date.parse(contentDetails.videoPublishedAt) / 1000,
-      })
+  for (const { snippet, contentDetails } of await fetchUploads()) {
+    // Private and deleted videos have no publish date.
+    if (!contentDetails.videoPublishedAt) continue
+    const series = findSeries(snippet.title)
+    if (!series) continue
+    const code = readEpisodeCode(contentDetails.videoId, snippet.title)
+    if (code === null) continue
+    if (code === undefined) {
+      unknown.push(`${contentDetails.videoId}  ${snippet.title}`)
+      continue
     }
-    pageToken = page.nextPageToken
-  } while (pageToken)
+    found.push({
+      accountId: series.accountId,
+      videoId: contentDetails.videoId,
+      title: stripSeriesSuffix(snippet.title, series.at),
+      ...code,
+      publishedAt: Date.parse(contentDetails.videoPublishedAt) / 1000,
+    })
+  }
 
   if (unknown.length) {
     console.warn(`\nSeries videos without an episode code, left out (add them to TITLE_FIXES):`)
@@ -199,6 +233,8 @@ type ChessComPlayer = { username: string; rating: number }
 type ChessComGame = {
   uuid: string
   pgn: string
+  /** The moves, two characters each. See replayOccupancy. */
+  tcn: string
   end_time: number
   rules: string
   time_class: string
@@ -229,14 +265,16 @@ function readStartTime(game: ChessComGame): number {
   return game.end_time - Number.parseInt(game.time_control, 10)
 }
 
+type SyncGame = SeasonGame & { tcn: string; isWhite: boolean; opponent: string }
+
 /** The account's games in its time class, split into runs, oldest first. Run n is season n. */
-async function fetchRuns(accountId: AccountId): Promise<SeasonGame[][]> {
+async function fetchRuns(accountId: AccountId): Promise<SyncGame[][]> {
   const account = ACCOUNTS.find(({ id }) => id === accountId)!
   const username = account.username.toLowerCase()
   const { archives } = await getChessCom<{ archives: string[] }>(
     `https://api.chess.com/pub/player/${username}/games/archives`,
   )
-  const games: SeasonGame[] = []
+  const games: SyncGame[] = []
   // One month at a time: Chess.com rate-limits parallel requests.
   for (const archive of archives) {
     const month = await getChessCom<{ games: ChessComGame[] }>(archive)
@@ -250,12 +288,15 @@ async function fetchRuns(accountId: AccountId): Promise<SeasonGame[][]> {
         ownRating: (isWhite ? game.white : game.black).rating,
         opponentRating: (isWhite ? game.black : game.white).rating,
         moveCount: countMoves(game.pgn),
+        tcn: game.tcn,
+        isWhite,
+        opponent: (isWhite ? game.black : game.white).username,
       })
     }
   }
   games.sort((a, b) => a.endedAt - b.endedAt)
 
-  const runs: SeasonGame[][] = []
+  const runs: SyncGame[][] = []
   for (const [index, game] of games.entries()) {
     const previous = games[index - 1]
     if (!previous || isRunReset(previous.ownRating, game.ownRating)) runs.push([])
@@ -292,9 +333,81 @@ function countTitleAgreement(
   return { checked, agreeing }
 }
 
+// Timestamps ------------------------------------------------------------------
+
+/** Episodes from the last run, by video id, to reuse their timestamps. */
+async function readPreviousEpisodes(): Promise<Map<string, VideoEpisode>> {
+  try {
+    const previous = JSON.parse(await readFile(OUTPUT_PATH, "utf8")) as GameVideosFile
+    return new Map(Object.values(previous).flat().map((episode) => [episode.videoId, episode]))
+  } catch {
+    return new Map()
+  }
+}
+
+function hasSameGames(episode: VideoEpisode, games: readonly SyncGame[]): boolean {
+  const previous = new Set([...episode.gameUuids, ...episode.uncertainGameUuids])
+  return previous.size === games.length && games.every((game) => previous.has(game.uuid))
+}
+
+/**
+ * Seconds into the episode where each of its games starts, for the games its
+ * storyboard shows. Reuses the last run's result while the episode keeps the
+ * same games. Undefined when the storyboard can't be read: the next run
+ * tries again, and the links open the video from the start meanwhile.
+ */
+async function findStartSeconds(
+  code: string,
+  videoId: string,
+  games: readonly SyncGame[],
+  block: { first: number; end: number },
+  previous: VideoEpisode | undefined,
+): Promise<Record<string, number> | undefined> {
+  const shown = games.slice(block.first, block.end)
+  if (!refreshTimestamps && previous?.startSeconds && hasSameGames(previous, shown)) {
+    return previous.startSeconds
+  }
+
+  let frames
+  try {
+    frames = await readStoryboard(videoId)
+  } catch (error) {
+    console.warn(`    ${code}: no timestamps, ${error instanceof Error ? error.message : error}`)
+    return undefined
+  }
+  const candidates: CandidateGame[] = games
+    .slice(Math.max(0, block.first - NEIGHBOR_GAMES), block.end + NEIGHBOR_GAMES)
+    .flatMap((game) => {
+      const positions = replayOccupancy(game.tcn, game.isWhite)
+      return positions ? [{ uuid: game.uuid, positions }] : []
+    })
+  const starts = findGameStarts(frames, candidates)
+
+  // A game of the episode missing from the video, or a neighbour in it, means
+  // the split is off there. Reported only: an override fixes it.
+  const missing = shown.filter((game) => !starts.has(game.uuid))
+  const strays = games.filter(
+    (game, index) => (index < block.first || index >= block.end) && starts.has(game.uuid),
+  )
+  if (showDetails) {
+    const found = shown.flatMap((game) =>
+      starts.has(game.uuid) ? [`${formatVideoTime(starts.get(game.uuid)!)} ${game.opponent}`] : [],
+    )
+    console.log(`    ${code}  ${found.join(", ") || "no games found"}`)
+  }
+  if (missing.length) {
+    console.warn(`    ${code}: not in the video: ${missing.map((game) => game.opponent).join(", ")}`)
+  }
+  if (strays.length) {
+    console.warn(`    ${code}: in the video but not in the episode: ${strays.map((game) => game.opponent).join(", ")}`)
+  }
+  return Object.fromEntries(shown.flatMap((game) => (starts.has(game.uuid) ? [[game.uuid, starts.get(game.uuid)!]] : [])))
+}
+
 // Main ------------------------------------------------------------------------
 
 const overrides = JSON.parse(await readFile(OVERRIDES_PATH, "utf8")) as Record<string, string | null>
+const previousEpisodes = await readPreviousEpisodes()
 const videosByAccount = await fetchSeriesVideos()
 const output = {} as GameVideosFile
 
@@ -329,24 +442,38 @@ for (const account of ACCOUNTS) {
         `titles agree ${titles.agreeing}/${titles.checked} without using them`,
     )
 
+    const readsTimestamps = season >= TIMESTAMP_FROM_SEASON[account.id]
+    let gamesTimed = 0
+    let gamesLinked = 0
     for (const [index, video] of seasonVideos.entries()) {
       const match = matches[index]
       const shown = match.games ? games.slice(match.games.first, match.games.end) : []
-      const isSure = (position: number) => match.gameMargins[position] >= CONFIDENT_MARGIN
-      if (showDetails && !shown.every((_, position) => isSure(position))) {
-        const marks = shown.map((game, position) => `${formatDate(game.startedAt)}${isSure(position) ? "" : "?"}`)
-        console.log(`    ${formatEpisodeCode(season, video.episode)}  ${marks.join(", ") || "no games"}  "${video.title}"`)
+      const code = formatEpisodeCode(season, video.episode)
+      const startSeconds =
+        readsTimestamps && match.games
+          ? await findStartSeconds(code, video.videoId, games, match.games, previousEpisodes.get(video.videoId))
+          : undefined
+      // A game seen in the video is in the episode, whatever the split said.
+      const isSure = (game: SyncGame, position: number) =>
+        match.gameMargins[position] >= CONFIDENT_MARGIN || startSeconds?.[game.uuid] !== undefined
+      if (showDetails && !shown.every(isSure)) {
+        const marks = shown.map((game, position) => `${formatDate(game.startedAt)}${isSure(game, position) ? "" : "?"}`)
+        console.log(`    ${code}  ${marks.join(", ") || "no games"}  "${video.title}"`)
       }
+      gamesLinked += shown.length
+      gamesTimed += startSeconds ? Object.keys(startSeconds).length : 0
       entries.push({
         videoId: video.videoId,
         title: video.title,
         season,
         episode: video.episode,
         publishedAt: new Date(video.publishedAt * 1000).toISOString(),
-        gameUuids: shown.filter((_, position) => isSure(position)).map((game) => game.uuid),
-        uncertainGameUuids: shown.filter((_, position) => !isSure(position)).map((game) => game.uuid),
+        gameUuids: shown.filter(isSure).map((game) => game.uuid),
+        uncertainGameUuids: shown.filter((game, position) => !isSure(game, position)).map((game) => game.uuid),
+        ...(startSeconds ? { startSeconds } : {}),
       })
     }
+    if (readsTimestamps) console.log(`        timestamps for ${gamesTimed} of ${gamesLinked} linked games`)
   }
   output[account.id] = entries
 }

@@ -35,6 +35,7 @@ export function findGameVideo(accountId: AccountId, uuid: string): GameVideo | n
     videoId: found.episode.videoId,
     code: formatEpisodeCode(found.episode.season, found.episode.episode),
     isCertain: found.isCertain,
+    startSeconds: found.episode.startSeconds?.[uuid] ?? null,
   }
 }
 

@@ -16,6 +16,11 @@ export type VideoEpisode = {
   gameUuids: string[]
   /** Games probably in the episode, though a neighbouring one fit almost as well. */
   uncertainGameUuids: string[]
+  /**
+   * Second of the video where each game starts, by game UUID, read from the
+   * video's thumbnails. Only in recent seasons, for the games found there.
+   */
+  startSeconds?: Record<string, number>
 }
 
 /** Each account's episodes, oldest first. */
@@ -28,4 +33,6 @@ export type GameVideo = {
   code: string
   /** False when a neighbouring episode fit the game almost as well. */
   isCertain: boolean
+  /** Second of the video where the game starts, or null when unknown. */
+  startSeconds: number | null
 }

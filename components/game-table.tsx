@@ -182,7 +182,7 @@ export function GameTable({ accountId, games, caption, gameHref, onOpenGame }: G
                   {game.video ? (
                     // Icon only, so the actions still fit beside the columns.
                     <a
-                      href={getYouTubeVideoUrl(game.video.videoId)}
+                      href={getYouTubeVideoUrl(game.video.videoId, game.video.startSeconds)}
                       target="_blank"
                       rel="noopener noreferrer"
                       title={`Episódio ${game.video.code} no YouTube${game.video.isCertain ? "" : " (provável)"}`}
